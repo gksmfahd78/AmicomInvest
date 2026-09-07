@@ -1,0 +1,286 @@
+.advanced-chart {
+  width: calc(100vw - 40px);
+  max-width: 1800px;
+  height: calc(100dvh - 40px);
+  max-height: none;
+  margin: auto;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--app-text);
+  overflow: auto;
+  box-shadow: 0 24px 100px #0008;
+}
+.advanced-chart[open] {
+  display: flex;
+  flex-direction: column;
+}
+.advanced-chart::backdrop {
+  background: #06060cb3;
+  backdrop-filter: blur(4px);
+}
+.advanced-header {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  padding: 18px 23px;
+  border-bottom: 1px solid var(--line);
+}
+.advanced-header h2 {
+  font-size: 20px;
+}
+.advanced-header small {
+  font-size: 12px;
+  color: var(--muted);
+  margin-left: 9px;
+}
+.advanced-header p {
+  font-size: 10px;
+  color: var(--muted);
+  margin-top: 4px;
+}
+.advanced-period {
+  display: flex;
+  gap: 5px;
+  margin-left: auto;
+}
+.advanced-period button,
+.draw-tools button {
+  border-radius: 5px;
+  padding: 8px 11px;
+  color: var(--muted);
+  font-size: 11px;
+}
+.advanced-chart button.active {
+  background: var(--brand-soft);
+  color: var(--accent);
+}
+.advanced-chart button:hover:not(:disabled) {
+  color: var(--accent);
+}
+.advanced-close {
+  padding: 7px;
+  display: flex;
+}
+.advanced-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--line);
+}
+.draw-tools {
+  display: flex;
+  gap: 3px;
+}
+.draw-tools button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.draw-color,
+.draw-width {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+}
+.draw-color input {
+  width: 30px;
+  height: 29px;
+  padding: 2px;
+  margin: 0;
+  border-radius: 4px;
+}
+.draw-width select {
+  padding: 5px;
+  width: 58px;
+  margin: 0;
+  font-size: 10px;
+}
+.draw-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-left: auto;
+}
+.draw-actions button,
+.zoom-actions button {
+  display: flex;
+  align-items: center;
+  padding: 7px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  font-size: 10px;
+}
+.advanced-indicators {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
+  padding: 9px 24px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.advanced-indicators > div,
+.advanced-indicators label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.advanced-indicators input {
+  width: auto;
+  margin: 0;
+  accent-color: var(--accent);
+}
+.zoom-actions span {
+  font-size: 10px;
+}
+.advanced-ohlc {
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+  font-size: 10px;
+  padding: 5px 25px;
+  color: var(--muted);
+  min-height: 26px;
+}
+.advanced-canvas {
+  min-height: 220px;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.advanced-canvas svg {
+  width: 100%;
+  height: 100%;
+  min-height: 220px;
+  max-height: 100%;
+  user-select: none;
+}
+.advanced-range {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 26px 7px;
+  color: var(--muted);
+  font-size: 10px;
+}
+.advanced-range input {
+  padding: 0;
+  accent-color: var(--accent);
+}
+.advanced-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 11px 23px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 10px;
+}
+.chart-expand {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 9px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  color: var(--accent);
+  font-size: 10px;
+  white-space: nowrap;
+}
+@media (max-width: 750px) {
+  .advanced-chart {
+    width: 100vw;
+    height: 100dvh;
+    border-radius: 0;
+    border: 0;
+  }
+  .advanced-header {
+    padding: 12px;
+    gap: 8px;
+  }
+  .advanced-header h2 {
+    font-size: 15px;
+  }
+  .advanced-header small {
+    font-size: 10px;
+  }
+  .advanced-header p {
+    font-size: 9px;
+  }
+  .advanced-period {
+    gap: 0;
+  }
+  .advanced-period button {
+    font-size: 10px;
+    padding: 7px;
+  }
+  .advanced-toolbar {
+    padding: 8px;
+    gap: 9px;
+  }
+  .draw-tools {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .draw-tools button {
+    flex-direction: column;
+    gap: 3px;
+    padding: 6px;
+    font-size: 9px;
+  }
+  .draw-actions {
+    gap: 3px;
+  }
+  .draw-actions button {
+    padding: 6px;
+    font-size: 9px;
+  }
+  .advanced-indicators {
+    padding: 8px 12px;
+    font-size: 10px;
+  }
+  .advanced-indicators > div,
+  .advanced-indicators label {
+    gap: 5px;
+  }
+  .zoom-actions span {
+    display: none;
+  }
+  .advanced-ohlc {
+    padding: 5px 12px;
+    gap: 8px;
+    font-size: 9px;
+  }
+  .advanced-footer {
+    padding: 9px 12px;
+    font-size: 9px;
+  }
+  .advanced-canvas {
+    min-height: 230px;
+  }
+  .advanced-range {
+    padding: 5px 12px;
+  }
+  .advanced-chart .chart-empty {
+    min-height: 150px;
+  }
+  .chart-expand {
+    padding: 6px;
+    font-size: 9px;
+  }
+}
+
+.advanced-range > span {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.advanced-range > button { flex: 0 0 auto; white-space: nowrap; padding: 6px 10px; border: 1px solid var(--line); border-radius: 6px; color: var(--app-text); }
