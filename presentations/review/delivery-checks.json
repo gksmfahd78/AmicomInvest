@@ -1,0 +1,74 @@
+{
+  "presentations": [
+    {
+      "file": "AMICOM_Investment_Course.pptx",
+      "slides": 90,
+      "pdfMatched": true,
+      "notesPresent": true,
+      "sha256": "acc5342c0d7ae463df611538c5554b44a69ee154b6e45ca05a9750a138c8a68a"
+    },
+    {
+      "file": "AMICOM_Week_01.pptx",
+      "slides": 11,
+      "pdfMatched": true,
+      "notesPresent": true,
+      "sha256": "df1157c27a5f451c7af8d86e4be1481838030b8f742a50fd0c7c6ffe7af5ad76"
+    },
+    {
+      "file": "AMICOM_Week_02.pptx",
+      "slides": 11,
+      "pdfMatched": true,
+      "notesPresent": true,
+      "sha256": "4b6f66a5842ac97d4bca545a662d56b4fbd5b36c0be31192996e68816d5abfc9"
+    },
+    {
+      "file": "AMICOM_Week_03.pptx",
+      "slides": 12,
+      "pdfMatched": true,
+      "notesPresent": true,
+      "sha256": "f8a6a2dac6ed70d062fea860511b237725148846b9e4e8574a04906dd9a4b598"
+    },
+    {
+      "file": "AMICOM_Week_04.pptx",
+      "slides": 11,
+      "pdfMatched": true,
+      "notesPresent": true,
+      "sha256": "ec385728c2f29e4c16677d19ed88769027743d7682701c8fa6db61febaf67a91"
+    },
+    {
+      "file": "AMICOM_Week_05.pptx",
+      "slides": 11,
+      "pdfMatched": true,
+      "notesPresent": true,
+      "sha256": "38f4c20f62c78e716eb1e37a95eab3b68d9ec4e44ca1c3a2eab4644e0416300d"
+    },
+    {
+      "file": "AMICOM_Week_06.pptx",
+      "slides": 11,
+      "pdfMatched": true,
+      "notesPresent": true,
+      "sha256": "d649ea4d65ee4702dcc39f0338e2ac48671194d981e3938aa8afefb9089f599b"
+    },
+    {
+      "file": "AMICOM_Week_07.pptx",
+      "slides": 12,
+      "pdfMatched": true,
+      "notesPresent": true,
+      "sha256": "8dce8a4772492c58f92865998c798a0e480be5704b7c826f4b3789d2a13a0145"
+    },
+    {
+      "file": "AMICOM_Week_08.pptx",
+      "slides": 11,
+      "pdfMatched": true,
+      "notesPresent": true,
+      "sha256": "9d76a51ebc935cb0ef219d2d8abc92345b75a0818ac143efdfe4088903af7247"
+    }
+  ],
+  "renderedAndVerified": true,
+  "designReview": "All 90 slides reviewed in rendered contact sheets; key charts reviewed at full resolution.",
+  "package": "/home/leedonghyun/AmicomInvest/presentations/AMICOM_8Week_PPT_Package.zip",
+  "packageBytes": 34232067,
+  "fontPack": "Noto Sans CJK Regular/Bold with redistribution license",
+  "nativePowerPointTested": false,
+  "renderer": "LibreOffice Impress"
+}

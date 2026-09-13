@@ -1,0 +1,887 @@
+/* Shared form geometry: grid gaps own spacing, labels have no trailing margin. */
+.competition-admin form > label,
+.corporate-action form > label,
+.amend-form > label {
+  margin-bottom: 0;
+  min-width: 0;
+}
+.competition-admin :is(input, select, .primary),
+.corporate-action :is(input, select, .primary) {
+  height: 46px;
+}
+.competition-admin .order-disclaimer,
+.corporate-action .order-disclaimer {
+  text-align: left;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.7;
+}
+.panel-heading {
+  flex-wrap: wrap;
+}
+.panel-heading h2 {
+  line-height: 1.5;
+}
+.panel-heading h2 svg {
+  flex-shrink: 0;
+}
+.responsive-table {
+  font-variant-numeric: tabular-nums;
+}
+.responsive-table :is(th, td) {
+  vertical-align: middle;
+}
+.responsive-table td[data-label="대회"],
+.responsive-table td[data-label="메모"],
+.responsive-table td[data-label="사유"] {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  min-width: 150px;
+  max-width: 360px;
+}
+.ranking-actions {
+  min-width: 0;
+  max-width: 100%;
+}
+.ranking-actions select {
+  min-width: 0;
+  max-width: 100%;
+  flex: 1;
+}
+.mobile-profile-label {
+  display: none;
+}
+@media (min-width: 601px) and (max-width: 1250px) {
+  .order-panel form > label {
+    margin-bottom: 0;
+  }
+  .order-panel form > :is(label, .order-total) {
+    min-width: 0;
+  }
+  .order-panel .submit-order {
+    min-height: 44px;
+  }
+}
+@media (min-width: 851px) and (max-width: 1100px) {
+  .competition-admin form {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+  .competition-admin form > label:first-child {
+    grid-column: 1 / -1;
+  }
+  .admin-grid {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 750px) {
+  .advanced-header {
+    flex-wrap: wrap;
+  }
+  .advanced-header > div:first-child {
+    min-width: 0;
+    flex: 1;
+    overflow-wrap: anywhere;
+  }
+  .advanced-period {
+    order: 3;
+    flex-basis: 100%;
+  }
+  .advanced-period button {
+    flex: 1;
+  }
+  .advanced-indicators {
+    flex-wrap: wrap;
+  }
+  .advanced-chart button {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  .advanced-chart
+    :is(.draw-tools button, .draw-actions button, .advanced-period button) {
+    font-size: 12px;
+  }
+  .advanced-chart
+    :is(
+      .advanced-header p,
+      .advanced-header small,
+      .advanced-ohlc,
+      .advanced-footer,
+      .advanced-range,
+      .advanced-indicators label
+    ) {
+    font-size: 12px;
+    line-height: 1.6;
+  }
+  .advanced-toolbar .draw-actions {
+    flex-wrap: wrap;
+    margin-left: 0;
+  }
+  .advanced-range {
+    flex-wrap: wrap;
+  }
+  .advanced-range input {
+    flex: 1 1 100%;
+    min-height: 32px;
+  }
+  .advanced-footer {
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+  }
+}
+@media (max-width: 600px) {
+  :root {
+    font-size: 14px;
+    line-height: 1.6;
+    -webkit-text-size-adjust: 100%;
+  }
+  /* Use the full phone width, with persistent text labels for navigation. */
+  .sidebar {
+    inset: auto 0 0;
+    width: 100%;
+    padding: 6px 6px calc(6px + env(safe-area-inset-bottom));
+    flex-direction: row;
+    align-items: stretch;
+    gap: 4px;
+    border-right: 0;
+    border-top: 1px solid var(--line);
+    box-shadow: 0 -4px 20px #0000000a;
+  }
+  .sidebar > :is(.brand, .workspace, .nav-label) {
+    display: none;
+  }
+  .sidebar nav {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+    flex: 1;
+    min-width: 0;
+    margin: 0;
+    gap: 2px;
+  }
+  .sidebar .nav-item {
+    flex: 1;
+    min-width: 0;
+    margin: 0;
+    padding: 6px 2px;
+    flex-direction: column;
+    gap: 3px;
+    font-size: 11px;
+    line-height: 1.4;
+    white-space: nowrap;
+    min-height: 54px;
+  }
+  .nav-item svg {
+    width: 21px;
+    height: 21px;
+  }
+  .sidebar .side-bottom {
+    display: none;
+  }
+  main {
+    width: 100%;
+    min-width: 0;
+    margin-left: 0;
+  }
+  .main-content {
+    padding: 20px 14px calc(90px + env(safe-area-inset-bottom));
+  }
+  .topbar {
+    height: auto;
+    min-height: 60px;
+    padding: 10px 66px 10px 14px;
+    flex-wrap: wrap;
+    gap: 4px 12px;
+  }
+  .breadcrumb {
+    font-size: 12px;
+  }
+  .top-status {
+    font-size: 11px;
+    flex-wrap: wrap;
+  }
+  .theme-toggle {
+    top: 8px;
+    right: 12px;
+    min-width: 44px;
+    min-height: 44px;
+  }
+  .page-heading h1 {
+    font-size: 22px;
+    line-height: 1.4;
+    word-break: keep-all;
+  }
+  .eyebrow {
+    font-size: 10px;
+  }
+  .page-heading p,
+  .mode-banner {
+    font-size: 12px;
+  }
+  .summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .summary-card {
+    padding: 14px 12px;
+    min-width: 0;
+  }
+  .summary-title {
+    font-size: 12px;
+    gap: 4px;
+  }
+  .summary-value {
+    font-size: clamp(18px, 5vw, 24px);
+    white-space: normal;
+    overflow-wrap: anywhere;
+    line-height: 1.4;
+    margin-top: 10px;
+  }
+  .summary-value small,
+  .summary-card p {
+    font-size: 11px;
+  }
+  .panel-heading {
+    padding: 16px;
+    gap: 8px;
+  }
+  .panel-heading h2 {
+    font-size: 16px;
+  }
+  .panel-heading .muted {
+    font-size: 12px;
+  }
+  .competition-admin form,
+  .corporate-action form,
+  .grant-panel form {
+    padding: 16px;
+  }
+  .competition-admin form,
+  .corporate-action form {
+    gap: 18px;
+  }
+  label,
+  .order-panel form > label,
+  .login-form form > label {
+    font-size: 14px;
+  }
+  input:not([type="checkbox"]):not([type="range"]):not([type="color"]),
+  select,
+  .order-panel input,
+  .order-panel select {
+    font-size: 16px;
+    min-height: 48px;
+    max-width: 100%;
+  }
+  input::placeholder,
+  .order-panel input::placeholder,
+  .search input::placeholder {
+    font-size: 13px;
+  }
+  .primary,
+  .submit-order {
+    min-height: 48px;
+    height: auto;
+    font-size: 15px;
+  }
+  .input-unit > span {
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 13px;
+  }
+  .small-tabs {
+    flex-wrap: wrap;
+  }
+  .small-tabs button,
+  .large.small-tabs button,
+  .text-button,
+  .quantity-shortcuts button,
+  .market-filter button,
+  .stock-pagination button,
+  .order-side button,
+  .chart-expand {
+    font-size: 13px;
+    min-height: 44px;
+  }
+  .large.small-tabs button {
+    margin-right: 4px;
+  }
+  .stock-panel .stock-list {
+    max-height: 300px;
+    overscroll-behavior-y: contain;
+  }
+  .search {
+    height: 48px;
+  }
+  .stock-select {
+    min-height: 64px;
+    font-size: 14px;
+  }
+  .stock-select b {
+    font-size: 14px;
+  }
+  .stock-select .stock-label b {
+    max-width: none;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .stock-select small,
+  .stock-select em,
+  .stock-result-count,
+  .stock-pagination {
+    font-size: 12px;
+  }
+  .star {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  .quote-line,
+  .quote-stats,
+  .chart-footer {
+    flex-wrap: wrap;
+  }
+  .quote-stats,
+  .quote-line > span,
+  .chart-footer,
+  .order-available,
+  .order-total,
+  .order-disclaimer,
+  .ranking-note,
+  .empty span,
+  .footer {
+    font-size: 12px;
+    line-height: 1.7;
+  }
+  .order-panel .order-side {
+    max-width: none;
+  }
+  .ranking-actions {
+    flex: 1 1 100%;
+    gap: 6px;
+  }
+  .analytics-grid,
+  .competition-overview,
+  .monitor-grid {
+    padding: 16px;
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .analytics-grid :is(small, span),
+  .competition-overview :is(small, span),
+  .monitor-grid small {
+    font-size: 12px;
+  }
+  .monitor-grid b {
+    overflow-wrap: anywhere;
+  }
+  /* Preserve table headers for assistive technology; show labeled cards visually. */
+  .responsive-table,
+  .responsive-table tbody {
+    display: block;
+    width: 100%;
+  }
+  .responsive-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .responsive-table tbody {
+    padding: 12px;
+  }
+  .responsive-table tbody tr {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px 16px;
+    padding: 16px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--surface);
+  }
+  .responsive-table tbody tr + tr {
+    margin-top: 12px;
+  }
+  .responsive-table tbody td {
+    display: block;
+    min-width: 0;
+    max-width: none;
+    padding: 0;
+    border: 0;
+    text-align: left;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    font-size: 14px;
+    line-height: 1.65;
+  }
+  .responsive-table td::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 4px;
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--muted);
+  }
+  .responsive-table td:first-child {
+    grid-column: 1 / -1;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--line);
+  }
+  .responsive-table
+    td:is(
+      [data-label="기간"],
+      [data-label="매매 이유"],
+      [data-label="메모"],
+      [data-label="사유"]
+    ),
+  .responsive-table[aria-label="주문 내역"] td[data-label="상태"] {
+    grid-column: 1 / -1;
+  }
+  .responsive-table td :is(small, .order-status, .fill-details) {
+    font-size: 12px;
+  }
+  .responsive-table td .table-link {
+    font-size: 15px;
+    min-height: 44px;
+    text-align: left;
+  }
+  .responsive-table .holding-stock {
+    min-width: 0;
+  }
+  .responsive-table .fill-details small {
+    white-space: normal;
+  }
+  .fill-details summary {
+    padding: 10px 0;
+    min-height: 44px;
+  }
+  .cancel-button,
+  .danger-button,
+  .amend-form button {
+    min-height: 44px;
+    padding: 9px 12px;
+    font-size: 13px;
+  }
+  .amend-form {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: 16px;
+  }
+  .amend-form :is(strong, small, p) {
+    grid-column: 1 / -1;
+  }
+  .amend-form input {
+    max-width: 100%;
+    width: 100%;
+  }
+  .toast {
+    max-width: calc(100vw - 28px);
+    bottom: calc(84px + env(safe-area-inset-bottom));
+    font-size: 13px;
+    white-space: normal;
+  }
+  .login-switch {
+    align-items: center;
+    flex-wrap: wrap;
+    font-size: 13px;
+  }
+  .login-switch button {
+    min-height: 44px;
+  }
+  .login-form > p,
+  .login-info,
+  .login-info small {
+    font-size: 12px;
+  }
+}
+@media (max-width: 360px) {
+  .summary-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .summary-value {
+    font-size: 24px;
+  }
+}
+
+/* Mobile trade workspace and progressive record details. */
+.responsive-table .mobile-only {
+  display: none;
+}
+.trade-workspace [hidden] {
+  display: none !important;
+}
+@media (max-width: 600px) {
+  .theme-toggle {
+    position: absolute;
+  }
+  .trade-workspace {
+    scroll-margin-top: 8px;
+  }
+  .mobile-trade-header {
+    position: sticky;
+    top: 0;
+    z-index: 9;
+    padding: 14px 14px 0;
+    border: 1px solid var(--line);
+    border-radius: 10px 10px 0 0;
+    background: var(--surface);
+    box-shadow: 0 4px 12px #00000008;
+  }
+  .mobile-instrument {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .mobile-instrument > div {
+    flex: 1;
+    min-width: 0;
+  }
+  .mobile-instrument strong {
+    display: block;
+    font-size: 16px;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+  }
+  .mobile-instrument small {
+    display: block;
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .stock-picker-trigger {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    min-height: 44px;
+    flex-shrink: 0;
+    padding: 8px;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    font-size: 12px;
+    color: var(--accent);
+  }
+  .mobile-quote {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin: 10px 0;
+    font-variant-numeric: tabular-nums;
+  }
+  .mobile-quote strong {
+    font-size: 24px;
+  }
+  .mobile-quote span {
+    font-size: 14px;
+  }
+  .mobile-trade-tabs {
+    display: flex;
+    gap: 8px;
+  }
+  .mobile-trade-tabs button {
+    flex: 1;
+    min-height: 48px;
+    padding: 10px;
+    border-bottom: 3px solid transparent;
+    font-size: 15px;
+    color: var(--muted);
+  }
+  .mobile-trade-tabs button[aria-selected="true"] {
+    border-bottom-color: var(--accent);
+    font-weight: 700;
+    color: var(--accent);
+  }
+  .trade-workspace .trade-grid > .panel {
+    border-top: 0;
+    border-radius: 0 0 10px 10px;
+  }
+  .trade-workspace .chart-panel > :is(.instrument, .quote-line) {
+    display: none;
+  }
+  .trade-workspace .chart-panel {
+    min-height: 0;
+  }
+  .trade-workspace .book-panel:not([hidden]) {
+    display: block;
+  }
+  .trade-workspace .book-row {
+    min-height: 44px;
+    align-items: center;
+    font-size: 14px;
+    padding: 10px 18px;
+  }
+  .mobile-book-hint {
+    padding: 12px 16px 0;
+    color: var(--muted);
+    font-size: 12px;
+  }
+  .trade-workspace .book-label {
+    font-size: 12px;
+    padding: 12px 18px;
+  }
+  .mobile-order-budget {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 8px;
+    margin: 0 16px 18px;
+    padding: 12px;
+    border-radius: 7px;
+    background: var(--surface-raised);
+    font-size: 13px;
+  }
+  .mobile-order-budget span {
+    color: var(--muted);
+  }
+  .mobile-order-budget strong {
+    overflow-wrap: anywhere;
+  }
+  .stock-picker {
+    position: fixed;
+    inset: auto 0 0;
+    width: 100%;
+    max-width: 100%;
+    max-height: min(85dvh, 760px);
+    margin: 0;
+    padding: 0;
+    border: 1px solid var(--line);
+    border-radius: 18px 18px 0 0;
+    background: var(--surface);
+    color: var(--app-text);
+    overflow: auto;
+    overscroll-behavior: contain;
+  }
+  .stock-picker::backdrop {
+    background: #08080d88;
+  }
+  .stock-picker .stock-panel {
+    border: 0;
+    border-radius: 0;
+    max-height: min(85dvh, 760px);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .stock-picker .panel-heading {
+    flex-wrap: nowrap;
+    padding: 10px 16px;
+  }
+  .stock-picker .panel-heading .muted {
+    margin-left: auto;
+  }
+  .stock-picker-close {
+    display: grid;
+    place-items: center;
+    min-width: 44px;
+    min-height: 44px;
+  }
+  .stock-picker .stock-panel > :not(.stock-list) {
+    flex-shrink: 0;
+  }
+  .stock-picker .stock-panel .stock-list {
+    min-height: 0;
+    max-height: none;
+    flex: 1 1 auto;
+    overflow-y: auto;
+  }
+  .stock-picker .stock-pagination {
+    min-height: 60px;
+  }
+  .responsive-table .mobile-only {
+    display: block;
+  }
+  .responsive-table .record-row:not(.is-expanded) .record-detail {
+    display: none;
+  }
+  .responsive-table .record-row td[data-label="평가금액"] {
+    order: 1;
+  }
+  .responsive-table .record-row td[data-label="평가손익"] {
+    order: 2;
+  }
+  .responsive-table .record-row > .record-detail {
+    order: 3;
+  }
+  .responsive-table .record-row > .record-toggle-cell {
+    grid-column: 1 / -1;
+    order: 4;
+    border-top: 1px solid var(--line);
+    padding-top: 4px;
+  }
+  .responsive-table .record-toggle-cell::before {
+    display: none;
+  }
+  .record-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    min-height: 44px;
+    padding: 8px 0;
+    font-size: 13px;
+    color: var(--accent);
+  }
+  .record-toggle svg {
+    transform: rotate(90deg);
+  }
+  .record-toggle[aria-expanded="true"] svg {
+    transform: rotate(-90deg);
+  }
+  .amend-form {
+    scroll-margin-block: 180px 90px;
+  }
+}
+
+.theme-filter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 12px 8px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.theme-filter select {
+  flex: 1;
+  width: 0;
+  margin: 0;
+  min-height: 38px;
+  padding: 8px;
+  font-size: 12px;
+}
+.stock-result-count {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  justify-content: space-between;
+}
+.stock-result-count button {
+  padding: 5px 0;
+  color: var(--accent);
+  font-size: 11px;
+}
+.stock-theme-preview {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.5;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.theme-source {
+  padding: 8px 12px;
+  font-size: 10px;
+  color: var(--muted);
+  border-top: 1px solid var(--line);
+}
+.theme-error {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  padding: 0 12px 8px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.theme-error button {
+  min-height: 38px;
+  color: var(--accent);
+  text-decoration: underline;
+}
+.selected-stock-themes {
+  padding: 0 16px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+  font-size: 12px;
+}
+.selected-stock-themes summary {
+  cursor: pointer;
+  min-height: 40px;
+  padding: 10px 0;
+  color: var(--muted);
+}
+.selected-stock-themes p {
+  color: var(--muted);
+  padding-bottom: 12px;
+}
+.theme-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding-bottom: 12px;
+}
+.theme-tags button {
+  padding: 6px 9px;
+  border: 1px solid var(--brand-border);
+  border-radius: 6px;
+  background: var(--brand-soft);
+  color: var(--accent);
+  font-size: 11px;
+  overflow-wrap: anywhere;
+  max-width: 100%;
+}
+@media (max-width: 600px) {
+  .theme-filter,
+  .theme-error {
+    font-size: 13px;
+  }
+  .theme-filter select {
+    min-height: 44px;
+    font-size: 16px;
+  }
+  .stock-theme-preview {
+    font-size: 11px;
+  }
+  .stock-result-count button,
+  .theme-tags button,
+  .theme-error button {
+    min-height: 44px;
+    font-size: 12px;
+  }
+  .selected-stock-themes {
+    border: 1px solid var(--line);
+    border-top: 0;
+    font-size: 13px;
+  }
+  .selected-stock-themes summary {
+    min-height: 44px;
+  }
+  /* Keep results usable when the keyboard reduces the available height. */
+  .stock-picker .stock-panel {
+    max-height: none;
+    overflow: visible;
+  }
+  .stock-picker .stock-panel .stock-list {
+    max-height: 42dvh;
+    flex: none;
+    min-height: 96px;
+  }
+  .stock-picker .panel-heading {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: var(--surface);
+  }
+  .stock-picker .theme-source {
+    padding-bottom: max(10px, env(safe-area-inset-bottom));
+  }
+}
+
+.account-panels {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 24px;
+}
+.account-panels > .panel {
+  margin: 0;
+  min-width: 0;
+}
+@media (max-width: 600px) {
+  .account-panels {
+    gap: 20px;
+  }
+  .sidebar .nav-item {
+    justify-content: center;
+    text-align: center;
+  }
+}

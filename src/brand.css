@@ -280,22 +280,66 @@
   color: var(--muted);
   font-size: 9px;
 }
+/* Keep each quote inside the sidebar, including native scrollbar space. */
+.stock-panel {
+  min-width: 0;
+}
 .stock-panel .stock-list {
   max-height: 470px;
+  min-width: 0;
   overflow-y: auto;
+  scrollbar-gutter: stable;
   scrollbar-width: thin;
   scrollbar-color: var(--line) transparent;
 }
-.stock-select > span:first-child {
+.stock-row {
   min-width: 0;
 }
-.stock-select > span:first-child b {
-  display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 120px;
+.stock-row > .star {
+  flex-shrink: 0;
 }
-.stock-price {
+.stock-select {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+}
+.stock-select > .stock-main {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.stock-select .stock-label {
+  min-width: 0;
+  flex: 1;
+}
+.stock-select .stock-label b {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  max-width: none;
+  line-height: 1.5;
+}
+.stock-select .stock-label small {
+  overflow-wrap: anywhere;
+}
+.stock-select .stock-price {
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 8px;
+  text-align: left;
+  font-variant-numeric: tabular-nums;
+}
+.stock-select .stock-price > :is(b, small) {
+  margin: 0;
+  white-space: nowrap;
   flex-shrink: 0;
 }
 .stock-pagination {
@@ -306,7 +350,7 @@
   border-top: 1px solid var(--line);
   color: var(--muted);
   font-size: 10px;
-  margin-top: auto;
+  margin-top: 0;
 }
 .stock-pagination button {
   border: 1px solid var(--line);
@@ -321,12 +365,21 @@
 .stock-panel .stock-foot {
   margin-top: 0;
 }
+@media (min-width: 601px) {
+  /* Let the list fill the grid row without its contents stretching the chart. */
+  .stock-panel .stock-list {
+    height: 0;
+    min-height: 280px;
+    max-height: none;
+    flex: 1 1 auto;
+  }
+  .stock-panel > :not(.stock-list) {
+    flex-shrink: 0;
+  }
+}
 @media (max-width: 600px) {
   .stock-panel .stock-list {
     max-height: 265px;
-  }
-  .stock-select > span:first-child b {
-    max-width: 165px;
   }
 }
 

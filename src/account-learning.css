@@ -1,0 +1,351 @@
+.learning-panel {
+  min-width: 0;
+}
+.learning-body {
+  padding: 24px;
+}
+.learning-toolbar {
+  display: flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.learning-toolbar form {
+  display: flex;
+  align-items: end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.learning-toolbar label,
+.journal-form label,
+.trade-plan-fields label {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+.learning-toolbar select,
+.learning-toolbar input {
+  width: auto;
+  max-width: 100%;
+  min-height: 44px;
+}
+.learning-toolbar button,
+.journal-pagination button,
+.journal-form button {
+  min-height: 44px;
+}
+.learning-caption {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+}
+.learning-notice {
+  border-left: 3px solid #d79a37;
+  padding: 12px 16px;
+  line-height: 1.7;
+}
+.learning-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 14px;
+  margin: 18px 0;
+}
+.learning-metrics > div {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 18px;
+  min-width: 0;
+}
+.learning-metrics strong {
+  font-size: clamp(20px, 2vw, 28px);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.learning-metrics small,
+.risk-position small,
+.risk-theme small {
+  color: var(--muted);
+  line-height: 1.6;
+}
+.learning-metrics .benchmark-values {
+  font-size: 18px;
+}
+.performance-chart svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+.performance-chart svg text {
+  fill: var(--muted);
+  font-size: 12px;
+}
+.chart-account,
+.chart-benchmark {
+  fill: none;
+  stroke-width: 2.5;
+  vector-effect: non-scaling-stroke;
+}
+.chart-account {
+  stroke: #e45761;
+}
+.chart-benchmark {
+  stroke: #5298f7;
+}
+.chart-account-key {
+  color: #e45761;
+  align-self: center;
+}
+.chart-zero {
+  stroke: var(--line);
+  stroke-dasharray: 4;
+}
+.learning-panel summary,
+.trade-plan-fields summary {
+  cursor: pointer;
+  padding: 14px 0;
+  line-height: 1.6;
+}
+.learning-table-wrap {
+  overflow-x: auto;
+}
+.learning-table-wrap table {
+  width: 100%;
+  white-space: nowrap;
+}
+.learning-table-wrap th,
+.learning-table-wrap td {
+  padding: 12px;
+}
+.journal-card {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  margin: 12px 0;
+  overflow: hidden;
+}
+.journal-card > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px;
+}
+.journal-card > summary::before {
+  content: "+";
+  flex-shrink: 0;
+}
+.journal-card[open] > summary::before {
+  content: "−";
+}
+.journal-card > summary > span:first-of-type {
+  flex: 1;
+  min-width: 0;
+}
+.journal-card summary strong,
+.journal-card summary small {
+  display: block;
+  overflow-wrap: anywhere;
+}
+.journal-card summary small {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 6px;
+  line-height: 1.6;
+}
+.journal-status {
+  font-size: 12px;
+  white-space: nowrap;
+  color: var(--muted);
+}
+.journal-content {
+  padding: 0 18px 18px;
+}
+.journal-plan {
+  display: grid;
+  grid-template-columns: 145px minmax(0, 1fr);
+  gap: 12px;
+  padding: 18px 0;
+  border-top: 1px solid var(--line);
+}
+.journal-plan dt {
+  color: var(--muted);
+  font-size: 13px;
+}
+.journal-plan dd {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.7;
+}
+.journal-form {
+  display: grid;
+  gap: 16px;
+  padding-top: 16px;
+}
+.journal-form textarea,
+.trade-plan-fields textarea {
+  width: 100%;
+  resize: vertical;
+  min-height: 90px;
+  font: inherit;
+  color: inherit;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+  line-height: 1.7;
+}
+.journal-pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-top: 20px;
+}
+.journal-pagination span {
+  color: var(--muted);
+  font-size: 13px;
+  text-align: center;
+}
+.learning-empty {
+  padding: 24px 0;
+  color: var(--muted);
+  line-height: 1.8;
+}
+.risk-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 28px;
+}
+.risk-columns h3,
+.risk-scenario h3 {
+  font-size: 16px;
+  margin: 18px 0;
+}
+.risk-position {
+  margin-bottom: 18px;
+}
+.risk-position > div,
+.risk-pair {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  line-height: 1.6;
+}
+.risk-pair {
+  margin-bottom: 8px;
+}
+.risk-position progress {
+  width: 100%;
+  height: 8px;
+  accent-color: #e45761;
+  margin: 8px 0;
+}
+.risk-theme {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+.risk-theme small {
+  overflow-wrap: anywhere;
+}
+.risk-scenario {
+  margin-top: 20px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+.trade-plan-fields {
+  margin: 12px 0;
+}
+.trade-plan-fields label {
+  margin-bottom: 14px;
+}
+.order-weight-preview {
+  border-left: 3px solid #5298f7;
+  padding: 8px 12px;
+  line-height: 1.7;
+  font-size: 14px;
+}
+.order-weight-preview small {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+}
+@media (max-width: 700px) {
+  .learning-body {
+    padding: 16px;
+  }
+  .learning-panel .panel-heading {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .learning-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+  .learning-metrics > div {
+    padding: 12px;
+  }
+  .learning-metrics strong {
+    font-size: 20px;
+  }
+  .learning-metrics .benchmark-values {
+    font-size: 16px;
+  }
+  .risk-columns {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+  .journal-plan {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 5px;
+  }
+  .journal-plan dd {
+    margin-bottom: 12px;
+  }
+  .journal-card > summary {
+    padding: 12px;
+    gap: 8px;
+  }
+  .journal-content {
+    padding: 0 12px 12px;
+  }
+  .learning-panel input,
+  .learning-panel textarea,
+  .learning-panel select,
+  .trade-plan-fields input,
+  .trade-plan-fields textarea {
+    font-size: 16px;
+  }
+  .learning-toolbar > label {
+    flex: 1;
+  }
+  .learning-toolbar select {
+    width: 100%;
+  }
+}
+
+@media (max-width: 700px) {
+  .learning-toolbar {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .learning-toolbar > form {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+  .learning-toolbar form label {
+    flex: 1;
+    min-width: 0;
+  }
+  .learning-toolbar form input {
+    width: 100%;
+  }
+  .learning-toolbar select {
+    min-width: 0;
+  }
+}

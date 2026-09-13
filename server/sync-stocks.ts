@@ -3,6 +3,7 @@ const result = await downloadCatalog();
 console.log(
   JSON.stringify({
     updatedAt: result.updatedAt,
+    etf: result.stocks.filter((s) => s.instrument === "etf").length,
     kospi: result.stocks.filter((s) => s.market === "KOSPI").length,
     kosdaq: result.stocks.filter((s) => s.market === "KOSDAQ").length,
   }),

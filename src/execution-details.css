@@ -1,0 +1,49 @@
+.execution-state {
+  border-left: 3px solid var(--muted);
+  padding: 10px 12px;
+  margin: 0 0 18px;
+  line-height: 1.7;
+}
+.execution-state.ready {
+  border-color: #32b798;
+}
+.execution-state.paused {
+  border-color: #d79a37;
+  background: #d79a370d;
+}
+.execution-state strong {
+  font-size: 14px;
+}
+.execution-state p {
+  margin: 5px 0;
+}
+.execution-state small {
+  color: var(--muted);
+}
+.fill-evidence {
+  margin: 8px 0 12px;
+  padding: 10px;
+  border-left: 2px solid var(--line);
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.7;
+  min-width: 0;
+}
+.fill-evidence p {
+  margin: 0 0 6px;
+}
+.fill-evidence small {
+  display: block;
+}
+.execution-model {
+  margin-top: 12px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.8;
+}
+.execution-model summary {
+  cursor: pointer;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+}

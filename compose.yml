@@ -1,0 +1,21 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: amicom-invest:latest
+    container_name: amicom-invest
+    restart: unless-stopped
+    init: true
+    env_file:
+      - .env
+    environment:
+      HOST: 0.0.0.0
+      PORT: 3001
+      DATABASE_PATH: /app/data/study.sqlite
+    ports:
+      - "127.0.0.1:3116:3001"
+    volumes:
+      - ./data:/app/data
+    security_opt:
+      - no-new-privileges:true

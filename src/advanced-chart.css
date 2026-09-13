@@ -130,6 +130,23 @@
   align-items: center;
   gap: 10px;
 }
+.advanced-indicators > div:first-child {
+  flex-wrap: wrap;
+}
+.indicator-divider {
+  padding-left: 10px;
+  border-left: 1px solid var(--line);
+  color: var(--app-text);
+}
+.indicator-bollinger {
+  color: #65a9ff;
+}
+.indicator-rsi {
+  color: #d4a84f;
+}
+.indicator-macd {
+  color: #42aa70;
+}
 .advanced-indicators input {
   width: auto;
   margin: 0;
@@ -148,7 +165,7 @@
   min-height: 26px;
 }
 .advanced-canvas {
-  min-height: 220px;
+  min-height: 420px;
   flex: 1;
   display: flex;
   align-items: center;
@@ -264,7 +281,7 @@
     font-size: 9px;
   }
   .advanced-canvas {
-    min-height: 230px;
+    min-height: 360px;
   }
   .advanced-range {
     padding: 5px 12px;
@@ -283,4 +300,373 @@
   flex-shrink: 0;
 }
 
-.advanced-range > button { flex: 0 0 auto; white-space: nowrap; padding: 6px 10px; border: 1px solid var(--line); border-radius: 6px; color: var(--app-text); }
+.advanced-range > button {
+  flex: 0 0 auto;
+  white-space: nowrap;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--app-text);
+}
+
+/* Readable indicators in both themes. Price bands are distinct from candle colors. */
+.advanced-chart {
+  --band-upper: #68adff;
+  --band-middle: #f5b75f;
+  --band-lower: #4dd4ce;
+  --band-fill: #68adff18;
+  --indicator-gold: #f5b75f;
+  --indicator-teal: #4dd4ce;
+  --indicator-purple: #bc9aff;
+}
+[data-theme="light"] .advanced-chart {
+  --band-upper: #2563c7;
+  --band-middle: #a85b09;
+  --band-lower: #087f81;
+  --band-fill: #2563c715;
+  --indicator-gold: #a85b09;
+  --indicator-teal: #087f81;
+  --indicator-purple: #7850c9;
+}
+.advanced-chart > * {
+  flex-shrink: 0;
+}
+.advanced-chart .advanced-header {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: var(--surface);
+}
+.advanced-chart .advanced-canvas {
+  flex: 0 0 auto;
+}
+.advanced-chart .advanced-ohlc {
+  font-size: 12px;
+  line-height: 1.6;
+}
+.indicator-picker {
+  margin: 0 20px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.indicator-picker summary {
+  padding: 12px 14px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+}
+.indicator-picker summary span {
+  color: var(--muted);
+  font-weight: 400;
+  font-size: 12px;
+  margin-left: 8px;
+}
+.indicator-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0 14px 14px;
+}
+.indicator-presets button {
+  padding: 8px 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 12px;
+}
+.indicator-options {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  padding: 0 14px;
+}
+.indicator-options fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.indicator-options legend {
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+.indicator-options label {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 10px 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  margin-bottom: 8px;
+  cursor: pointer;
+}
+.indicator-options label:has(input:checked) {
+  border-color: var(--accent);
+  background: var(--brand-soft);
+}
+.indicator-options input {
+  flex: 0 0 17px;
+  width: 17px;
+  height: 17px;
+  margin: 2px 0 0;
+  accent-color: var(--accent);
+}
+.indicator-options b {
+  font-size: 13px;
+}
+.indicator-options small {
+  display: block;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--muted);
+  margin-top: 4px;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+.indicator-picker > p {
+  padding: 0 14px;
+  margin: 10px 0 12px;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+.indicator-picker a {
+  color: var(--muted);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.indicator-readouts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+  gap: 10px;
+  padding: 8px 20px 16px;
+}
+.indicator-readouts > div {
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 12px;
+  font-size: 13px;
+}
+.indicator-readouts header {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  justify-content: space-between;
+}
+.indicator-readouts header span,
+.indicator-readouts small {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+.indicator-value {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin: 10px 0;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+.indicator-value span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+.indicator-value i {
+  width: 16px;
+  border-top-width: 2px;
+}
+.indicator-readouts .bollinger-readout {
+  background: var(--band-fill);
+}
+.band-values {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  margin: 10px 0 12px;
+  font-variant-numeric: tabular-nums;
+}
+.band-values span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+.band-values span::before {
+  content: "";
+  width: 16px;
+  border-top: 2px solid currentColor;
+}
+.band-values b {
+  font-size: 14px;
+}
+.band-upper {
+  color: var(--band-upper);
+}
+.band-middle {
+  color: var(--band-middle);
+}
+.band-values .band-middle::before {
+  border-top-style: dashed;
+}
+.band-lower {
+  color: var(--band-lower);
+}
+.band-position {
+  position: relative;
+  height: 6px;
+  border-radius: 8px;
+  background: linear-gradient(90deg, var(--band-lower), var(--band-upper));
+  margin: 0 6px;
+}
+.band-position::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  border-left: 1px solid var(--surface);
+}
+.band-position i {
+  position: absolute;
+  top: -4px;
+  width: 12px;
+  height: 14px;
+  transform: translateX(-50%);
+  border: 2px solid var(--surface);
+  border-radius: 4px;
+  background: var(--app-text);
+  z-index: 1;
+}
+.band-scale {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--muted);
+  margin: 7px 0 6px;
+}
+@media (max-width: 1000px) {
+  .indicator-options {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 600px) {
+  .indicator-picker {
+    margin: 0 10px 10px;
+  }
+  .indicator-picker summary span {
+    display: block;
+    margin: 5px 0 0;
+  }
+  .indicator-options {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .indicator-readouts {
+    padding: 5px 10px 12px;
+  }
+  .indicator-presets button {
+    flex: 1 0 27%;
+  }
+  .advanced-chart .advanced-indicators {
+    gap: 12px;
+  }
+  .advanced-chart .advanced-header {
+    padding: 10px;
+  }
+  .advanced-chart .advanced-canvas svg {
+    max-height: none;
+  }
+}
+
+.indicator-value-details {
+  grid-column: 1 / -1;
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.indicator-value-details summary {
+  padding: 10px 12px;
+  cursor: pointer;
+  font-size: 13px;
+}
+.indicator-value-details summary span {
+  color: var(--muted);
+  font-size: 12px;
+  margin-left: 8px;
+}
+.indicator-value-details .indicator-readouts {
+  padding: 4px 10px 10px;
+}
+@media (max-width: 600px) {
+  .indicator-value-details summary span {
+    display: block;
+    margin: 5px 0 0;
+  }
+}
+
+.chart-gesture-hint {
+  margin: 0 20px 12px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 600px) {
+  .chart-gesture-hint {
+    margin-left: 10px;
+    margin-right: 10px;
+  }
+}
+.chart-period-zoom,
+.chart-window-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  margin: 0 20px 12px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+.chart-period-zoom label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--app-text);
+  cursor: pointer;
+  min-height: 32px;
+}
+.chart-period-zoom input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--accent);
+}
+.chart-period-zoom [data-testid="chart-visible-dates"] {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+}
+.chart-window-status {
+  padding: 10px 12px;
+  background: var(--brand-soft);
+  border-radius: 8px;
+}
+.chart-window-status button {
+  padding: 5px 9px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--app-text);
+}
+@media (max-width: 600px) {
+  .chart-period-zoom,
+  .chart-window-status {
+    margin-left: 10px;
+    margin-right: 10px;
+  }
+  .chart-period-zoom [data-testid="chart-visible-dates"] {
+    margin-left: 0;
+  }
+}

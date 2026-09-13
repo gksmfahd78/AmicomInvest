@@ -3,7 +3,42 @@ import { DatabaseSync } from "node:sqlite";
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
-import type { Order, User, Book } from "../src/types";
+import type { Order, User, Book, Instrument } from "../src/types";
+export type TradingCosts = {
+  commissionBps: number;
+  sellTaxBps: number;
+};
+const envRate = (name: string, fallback: number) => {
+  const value = Number(process.env[name]);
+  return Number.isFinite(value) && value >= 0 && value <= 1000
+    ? value
+    : fallback;
+};
+export const configuredTradingCosts = (): TradingCosts => ({
+  // 1bp = 0.01%. Rates are configurable simulation assumptions.
+  commissionBps: envRate("BROKER_COMMISSION_BPS", 1.5),
+  sellTaxBps: envRate("SELL_TAX_BPS", 15),
+});
+const charge = (value: number, bps: number) =>
+  Math.floor((value * bps) / 10000);
+export function competitionPerformance(
+  startingAssets: number,
+  startingDeposits: number,
+  assets: number,
+  deposits: number,
+  benchmarkRate: number,
+) {
+  const netGrants = Math.max(0, deposits - startingDeposits);
+  const rate =
+    startingAssets > 0
+      ? ((assets - netGrants - startingAssets) / startingAssets) * 100
+      : null;
+  return {
+    netGrants,
+    rate,
+    excessRate: rate === null ? null : rate - benchmarkRate,
+  };
+}
 export function hashPassword(password: string) {
   const salt = randomBytes(16).toString("hex");
   return salt + ":" + scryptSync(password, salt, 64).toString("hex");
@@ -18,7 +53,13 @@ export function verifyPassword(password: string, stored: string) {
 export class Store {
   db: DatabaseSync;
   private depth = 0;
-  constructor(path: string) {
+  readonly costs: TradingCosts;
+  constructor(
+    path: string,
+    costs = configuredTradingCosts(),
+    private resolveInstrument: (symbol: string) => Instrument = () => "stock",
+  ) {
+    this.costs = costs;
     if (path !== ":memory:") mkdirSync(dirname(path), { recursive: true });
     this.db = new DatabaseSync(path);
     this.db.exec(`
@@ -29,6 +70,11 @@ export class Store {
  CREATE TABLE IF NOT EXISTS orders(id INTEGER PRIMARY KEY,user_id INTEGER REFERENCES users(id),symbol TEXT NOT NULL,side TEXT NOT NULL,type TEXT NOT NULL,quantity INTEGER NOT NULL,limit_price INTEGER,status TEXT NOT NULL,fill_price INTEGER,created_at TEXT DEFAULT(strftime('%Y-%m-%dT%H:%M:%fZ','now')),note TEXT NOT NULL DEFAULT '',request_id TEXT NOT NULL,UNIQUE(user_id,request_id));
  CREATE TABLE IF NOT EXISTS grants(id INTEGER PRIMARY KEY,user_id INTEGER REFERENCES users(id),admin_id INTEGER REFERENCES users(id),amount INTEGER NOT NULL,note TEXT NOT NULL,created_at TEXT DEFAULT(strftime('%Y-%m-%dT%H:%M:%fZ','now')),request_id TEXT UNIQUE NOT NULL);
  `);
+    const userColumns = this.db.prepare("PRAGMA table_info(users)").all();
+    if (!userColumns.some((c) => c.name === "dividends"))
+      this.db.exec(
+        "ALTER TABLE users ADD COLUMN dividends INTEGER NOT NULL DEFAULT 0",
+      );
     const columns = this.db.prepare("PRAGMA table_info(orders)").all();
     if (!columns.some((c) => c.name === "filled_quantity"))
       this.transaction(() => {
@@ -40,9 +86,15 @@ export class Store {
         );
       });
     for (const [name, definition] of [
+      ["instrument", "TEXT NOT NULL DEFAULT 'stock'"],
       ["expires_at", "INTEGER"],
+      ["execution_reason", "TEXT"],
       ["cancel_reason", "TEXT"],
       ["replaces_id", "INTEGER"],
+      ["commission_bps", "REAL NOT NULL DEFAULT 0"],
+      ["sell_tax_bps", "REAL NOT NULL DEFAULT 0"],
+      ["fee", "INTEGER NOT NULL DEFAULT 0"],
+      ["tax", "INTEGER NOT NULL DEFAULT 0"],
     ]) {
       if (!columns.some((c) => c.name === name))
         this.db.exec(
@@ -56,6 +108,64 @@ export class Store {
     this.db.exec(
       "CREATE TABLE IF NOT EXISTS liquidity_used(symbol TEXT,side TEXT,price INTEGER,quantity INTEGER NOT NULL,PRIMARY KEY(symbol,side,price))",
     );
+    this.db.exec(
+      "CREATE TABLE IF NOT EXISTS corporate_actions(id INTEGER PRIMARY KEY,symbol TEXT NOT NULL,type TEXT NOT NULL,numerator INTEGER,denominator INTEGER,cash_per_share INTEGER,effective_date TEXT NOT NULL,note TEXT NOT NULL,admin_id INTEGER REFERENCES users(id),request_id TEXT NOT NULL UNIQUE,created_at TEXT DEFAULT(strftime('%Y-%m-%dT%H:%M:%fZ','now')))",
+    );
+    this.db.exec(
+      "CREATE TABLE IF NOT EXISTS liquidity_recovery(symbol TEXT PRIMARY KEY,day TEXT NOT NULL,volume INTEGER NOT NULL)",
+    );
+    const fillColumns = this.db.prepare("PRAGMA table_info(fills)").all();
+    for (const [name, definition] of [
+      ["fee", "INTEGER NOT NULL DEFAULT 0"],
+      ["tax", "INTEGER NOT NULL DEFAULT 0"],
+      ["realized_pnl", "INTEGER NOT NULL DEFAULT 0"],
+      ["cost_basis", "INTEGER NOT NULL DEFAULT 0"],
+      ["book_received_at", "INTEGER"],
+      ["reference_price", "INTEGER"],
+      ["available_quantity", "INTEGER"],
+      ["execution_note", "TEXT"],
+    ])
+      if (!fillColumns.some((c) => c.name === name))
+        this.db.exec("ALTER TABLE fills ADD COLUMN " + name + " " + definition);
+    this.db.exec(
+      "CREATE TABLE IF NOT EXISTS equity_snapshots(user_id INTEGER REFERENCES users(id),bucket INTEGER NOT NULL,equity INTEGER NOT NULL,captured_at INTEGER NOT NULL,PRIMARY KEY(user_id,bucket))",
+    );
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS competitions(
+        id INTEGER PRIMARY KEY,
+        name TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'active',
+        starts_at INTEGER NOT NULL,
+        ends_at INTEGER NOT NULL,
+        benchmark_name TEXT NOT NULL DEFAULT 'KOSPI',
+        benchmark_start REAL NOT NULL,
+        benchmark_end REAL,
+        admin_id INTEGER REFERENCES users(id),
+        request_id TEXT NOT NULL UNIQUE,
+        created_at TEXT DEFAULT(strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+      );
+      CREATE TABLE IF NOT EXISTS competition_entries(
+        competition_id INTEGER REFERENCES competitions(id),
+        user_id INTEGER REFERENCES users(id),
+        starting_assets INTEGER NOT NULL,
+        starting_deposits INTEGER NOT NULL,
+        ending_assets INTEGER,
+        ending_deposits INTEGER,
+        PRIMARY KEY(competition_id,user_id)
+      );
+    `);
+    const competitionColumns = this.db
+      .prepare("PRAGMA table_info(competitions)")
+      .all();
+    for (const [name, definition] of [
+      ["cancelled_at", "INTEGER"],
+      ["cancelled_by", "INTEGER"],
+      ["cancel_reason", "TEXT"],
+    ])
+      if (!competitionColumns.some((column) => column.name === name))
+        this.db.exec(
+          "ALTER TABLE competitions ADD COLUMN " + name + " " + definition,
+        );
     // Recover already consumed amounts when upgrading an existing database.
     for (const state of this.db.prepare("SELECT * FROM book_state").all()) {
       const snapshot = JSON.parse(String(state.snapshot));
@@ -109,19 +219,20 @@ export class Store {
   expire(now = Date.now()) {
     return this.db
       .prepare(
-        "UPDATE orders SET status='cancelled',cancel_reason='장 마감 만료' WHERE status='pending' AND expires_at IS NOT NULL AND expires_at<=?",
+        "UPDATE orders SET status='cancelled',cancel_reason='장 마감 만료',execution_reason='주문 유효 시간이 지나 미체결 잔량을 취소했습니다.' WHERE status='pending' AND expires_at IS NOT NULL AND expires_at<=?",
       )
       .run(now);
   }
   user(id: number) {
     return this.db
       .prepare(
-        "SELECT id,username,name,role,cash,deposits,realized FROM users WHERE id=?",
+        "SELECT id,username,name,role,cash,deposits,realized,dividends FROM users WHERE id=?",
       )
       .get(id) as unknown as User & {
       cash: number;
       deposits: number;
       realized: number;
+      dividends: number;
     };
   }
   createUser(
@@ -136,13 +247,15 @@ export class Store {
     return this.user(Number(r.lastInsertRowid));
   }
   reservedCash(id: number) {
-    return Number(
-      this.db
-        .prepare(
-          "SELECT COALESCE(SUM((quantity-filled_quantity)*limit_price),0) AS value FROM orders WHERE user_id=? AND status='pending' AND side='buy'",
-        )
-        .get(id)!.value,
-    );
+    return this.db
+      .prepare(
+        "SELECT quantity-filled_quantity AS quantity,limit_price,commission_bps FROM orders WHERE user_id=? AND status='pending' AND side='buy'",
+      )
+      .all(id)
+      .reduce((sum, order) => {
+        const value = Number(order.quantity) * Number(order.limit_price);
+        return sum + value + charge(value, Number(order.commission_bps));
+      }, 0);
   }
   reservedShares(id: number, symbol: string) {
     return Number(
@@ -223,7 +336,47 @@ export class Store {
       sessionDay(Number(old.received_at)) !== sessionDay(book.receivedAt);
     if (newDay)
       this.db.prepare("DELETE FROM liquidity_used WHERE symbol=?").run(symbol);
-    if (!old || old.snapshot !== snapshot || newDay) {
+    // A cumulative-volume advance retires at most that many simulated shares across both sides.
+    // Repeated books, missing prices, falling counters and elapsed time never create liquidity.
+    let recovered = 0;
+    const day = sessionDay(book.receivedAt);
+    if (
+      book.volumeDate === day &&
+      Number.isSafeInteger(book.volume) &&
+      book.volume! >= 0
+    ) {
+      const marker = this.db
+        .prepare("SELECT day,volume FROM liquidity_recovery WHERE symbol=?")
+        .get(symbol);
+      if (marker?.day === day && book.volume! > Number(marker.volume)) {
+        let budget = book.volume! - Number(marker.volume);
+        const visible = new Set([
+          ...asks.map((l) => "ask:" + l.price),
+          ...bids.map((l) => "bid:" + l.price),
+        ]);
+        for (const debt of this.db
+          .prepare(
+            "SELECT side,price,quantity FROM liquidity_used WHERE symbol=? AND quantity>0 ORDER BY rowid",
+          )
+          .all(symbol)) {
+          if (!visible.has(String(debt.side) + ":" + debt.price)) continue;
+          const amount = Math.min(budget, Number(debt.quantity));
+          if (amount <= 0) break;
+          this.db
+            .prepare(
+              "UPDATE liquidity_used SET quantity=quantity-? WHERE symbol=? AND side=? AND price=?",
+            )
+            .run(amount, symbol, debt.side!, debt.price!);
+          budget -= amount;
+          recovered += amount;
+        }
+      }
+      if (!marker || marker.day !== day || book.volume! > Number(marker.volume))
+        this.db
+          .prepare("INSERT OR REPLACE INTO liquidity_recovery VALUES(?,?,?)")
+          .run(symbol, day, book.volume!);
+    }
+    if (!old || old.snapshot !== snapshot || newDay || recovered > 0) {
       this.db.prepare("DELETE FROM liquidity WHERE symbol=?").run(symbol);
       for (const [side, levels] of [
         ["ask", asks],
@@ -254,6 +407,19 @@ export class Store {
         "INSERT INTO book_state VALUES(?,?,?) ON CONFLICT(symbol) DO UPDATE SET snapshot=excluded.snapshot,received_at=excluded.received_at",
       )
       .run(symbol, snapshot, book.receivedAt);
+  }
+  instrument(symbol: string): Instrument {
+    // Keep the server-issued classification when an order is amended or the catalog changes.
+    const previous = this.db
+      .prepare(
+        "SELECT instrument FROM orders WHERE symbol=? ORDER BY id DESC LIMIT 1",
+      )
+      .get(symbol);
+    return previous
+      ? previous.instrument === "etf"
+        ? "etf"
+        : "stock"
+      : this.resolveInstrument(symbol);
   }
   place(
     user: number,
@@ -288,7 +454,8 @@ export class Store {
             !Number.isSafeInteger(limit! * quantity)))
       )
         throw Error("주문 가격 또는 수량이 올바르지 않습니다.");
-      if (input.type === "limit") validatePrice(input.limitPrice!);
+      const instrument = this.instrument(symbol);
+      if (input.type === "limit") validatePrice(input.limitPrice!, instrument);
       this.expire();
       if (input.expiresAt !== undefined && input.expiresAt <= Date.now())
         throw Error("주문 유효 시간이 지났습니다.");
@@ -323,6 +490,8 @@ export class Store {
         if (remaining === quantity)
           throw Error("체결 가능한 상대 호가 잔량이 없습니다.");
       }
+      if (side === "buy")
+        required += charge(required, this.costs.commissionBps);
       if (!Number.isSafeInteger(required))
         throw Error("주문 금액 한도를 초과했습니다.");
       if (
@@ -332,7 +501,7 @@ export class Store {
         throw Error("주문 가능한 현금이 부족합니다.");
       const result = this.db
         .prepare(
-          "INSERT INTO orders(user_id,symbol,side,type,quantity,limit_price,status,note,request_id) VALUES(?,?,?,?,?,?,'pending',?,?)",
+          "INSERT INTO orders(user_id,symbol,side,type,quantity,limit_price,status,note,request_id,commission_bps,sell_tax_bps,instrument) VALUES(?,?,?,?,?,?,'pending',?,?,?,?,?)",
         )
         .run(
           user,
@@ -343,6 +512,9 @@ export class Store {
           limit,
           input.note,
           input.requestId,
+          this.costs.commissionBps,
+          instrument === "etf" ? 0 : this.costs.sellTaxBps,
+          instrument,
         );
       const id = Number(result.lastInsertRowid);
       this.db
@@ -352,26 +524,41 @@ export class Store {
       if (type === "market")
         this.db
           .prepare(
-            "UPDATE orders SET status='cancelled' WHERE id=? AND status='pending'",
+            "UPDATE orders SET status='cancelled',cancel_reason='시장가 미체결 잔량 취소',execution_reason='현재 모의 잔량까지 체결하고 시장가 미체결 수량은 취소했습니다.' WHERE id=? AND status='pending'",
           )
           .run(id);
       return this.db.prepare("SELECT * FROM orders WHERE id=?").get(id);
     });
   }
-  private fill(orderId: number, quantity: number, price: number) {
+  private fill(
+    orderId: number,
+    quantity: number,
+    price: number,
+    evidence: {
+      at: number;
+      reference: number;
+      available: number;
+      note: string;
+    },
+  ) {
     const o = this.db
       .prepare("SELECT * FROM orders WHERE id=?")
       .get(orderId) as unknown as Order & { user_id: number };
     const total = quantity * price;
+    const fee = charge(total, Number(o.commission_bps ?? 0));
+    const tax =
+      o.side === "sell" ? charge(total, Number(o.sell_tax_bps ?? 0)) : 0;
+    let costBasis = 0;
+    let realizedPnl = 0;
     if (o.side === "buy") {
       this.db
         .prepare("UPDATE users SET cash=cash-? WHERE id=?")
-        .run(total, o.user_id);
+        .run(total + fee, o.user_id);
       this.db
         .prepare(
           "INSERT INTO holdings(user_id,symbol,quantity,cost) VALUES(?,?,?,?) ON CONFLICT(user_id,symbol) DO UPDATE SET quantity=quantity+excluded.quantity,cost=cost+excluded.cost",
         )
-        .run(o.user_id, o.symbol, quantity, total);
+        .run(o.user_id, o.symbol, quantity, total + fee);
     } else {
       const held = this.db
         .prepare(
@@ -383,9 +570,11 @@ export class Store {
         quantity === held.quantity
           ? held.cost
           : Math.round((held.cost * quantity) / held.quantity);
+      costBasis = removed;
+      realizedPnl = total - fee - tax - removed;
       this.db
         .prepare("UPDATE users SET cash=cash+?,realized=realized+? WHERE id=?")
-        .run(total, total - removed, o.user_id);
+        .run(total - fee - tax, total - fee - tax - removed, o.user_id);
       this.db
         .prepare(
           "UPDATE holdings SET quantity=quantity-?,cost=cost-? WHERE user_id=? AND symbol=?",
@@ -396,21 +585,44 @@ export class Store {
       value = o.filled_value + total;
     this.db
       .prepare(
-        "UPDATE orders SET filled_quantity=?,filled_value=?,fill_price=?,status=? WHERE id=?",
+        "UPDATE orders SET filled_quantity=?,filled_value=?,fill_price=?,fee=fee+?,tax=tax+?,status=? WHERE id=?",
       )
       .run(
         filled,
         value,
         value / filled,
+        fee,
+        tax,
         filled === o.quantity ? "filled" : "pending",
         orderId,
       );
     this.db
-      .prepare("INSERT INTO fills(order_id,quantity,price) VALUES(?,?,?)")
-      .run(orderId, quantity, price);
+      .prepare(
+        "INSERT INTO fills(order_id,quantity,price,fee,tax,realized_pnl,cost_basis,book_received_at,reference_price,available_quantity,execution_note) VALUES(?,?,?,?,?,?,?,?,?,?,?)",
+      )
+      .run(
+        orderId,
+        quantity,
+        price,
+        fee,
+        tax,
+        realizedPnl,
+        costBasis,
+        evidence.at,
+        evidence.reference,
+        evidence.available,
+        evidence.note,
+      );
   }
   private matchCurrent(symbol: string) {
     this.expire();
+    const observed = this.db
+      .prepare("SELECT received_at,snapshot FROM book_state WHERE symbol=?")
+      .get(symbol)!;
+    const original = JSON.parse(String(observed.snapshot)) as Pick<
+      Book,
+      "asks" | "bids"
+    >;
     // Price priority, then receipt order, separately for each side.
     for (const side of ["buy", "sell"] as const) {
       const orders = this.db
@@ -436,16 +648,37 @@ export class Store {
           )
             break;
           let take = Math.min(remaining, Number(l.quantity));
-          if (o.type === "market" && side === "buy")
-            take = Math.min(
-              take,
-              Math.floor(
-                (this.user(o.user_id).cash - this.reservedCash(o.user_id)) /
-                  price,
-              ),
-            );
+          if (o.type === "market" && side === "buy") {
+            const available =
+              this.user(o.user_id).cash - this.reservedCash(o.user_id);
+            take = Math.min(take, Math.floor(available / price));
+            while (
+              take > 0 &&
+              take * price +
+                charge(take * price, Number(o.commission_bps ?? 0)) >
+                available
+            )
+              take--;
+          }
           if (take <= 0) break;
-          this.fill(o.id, take, price);
+          this.fill(o.id, take, price, {
+            at: Number(observed.received_at),
+            reference:
+              (side === "buy" ? original.asks : original.bids)[0]?.price ??
+              price,
+            available: Number(l.quantity),
+            note:
+              (side === "buy" ? "낮은 매도호가" : "높은 매수호가") +
+              "부터 가격·접수 순으로 배분했습니다. " +
+              (o.type === "limit"
+                ? "지정가 조건을 충족한 호가입니다. "
+                : "시장가 주문으로 상대 호가를 순서대로 사용했습니다. ") +
+              "이 가격의 배분 전 모의 잔량 " +
+              Number(l.quantity).toLocaleString("ko-KR") +
+              "주 중 " +
+              take.toLocaleString("ko-KR") +
+              "주를 체결했습니다.",
+          });
           this.db
             .prepare(
               "INSERT INTO liquidity_used VALUES(?,?,?,?) ON CONFLICT(symbol,side,price) DO UPDATE SET quantity=quantity+excluded.quantity",
@@ -459,8 +692,33 @@ export class Store {
           remaining -= take;
           if (!remaining) break;
         }
+        const withinLimit = (
+          side === "buy" ? original.asks : original.bids
+        ).some(
+          (l) =>
+            o.type === "market" ||
+            (side === "buy"
+              ? l.price <= o.limit_price!
+              : l.price >= o.limit_price!),
+        );
+        const reason =
+          remaining === 0
+            ? "주문 수량을 가격·접수 순으로 모의 체결했습니다."
+            : withinLimit
+              ? "가격 조건 안의 모의 잔량을 기다립니다. 앞선 주문에 배분되었거나 현재 잔량이 부족합니다."
+              : "지정가 조건에 맞는 상대 호가를 기다립니다.";
+        this.db
+          .prepare("UPDATE orders SET execution_reason=? WHERE id=?")
+          .run(reason, o.id);
       }
     }
+  }
+  defer(symbol: string, reason: string) {
+    this.db
+      .prepare(
+        "UPDATE orders SET execution_reason=? WHERE symbol=? AND status='pending'",
+      )
+      .run(reason.slice(0, 500), symbol);
   }
   match(symbol: string, book: Book) {
     this.transaction(() => {
@@ -507,7 +765,7 @@ export class Store {
         throw Error("정정 수량은 남은 미체결 수량 이하여야 합니다.");
       this.db
         .prepare(
-          "UPDATE orders SET status='cancelled',cancel_reason='정정으로 대체' WHERE id=?",
+          "UPDATE orders SET status='cancelled',cancel_reason='정정으로 대체',execution_reason='미체결 잔량을 정정 주문으로 대체했습니다.' WHERE id=?",
         )
         .run(id);
       const next = this.place(
@@ -531,11 +789,322 @@ export class Store {
     });
   }
 
+  recordEquity(user: number, equity: number, now = Date.now()) {
+    if (!Number.isSafeInteger(equity) || equity < 0) return;
+    const bucket = Math.floor(now / 300000);
+    this.db
+      .prepare(
+        "INSERT INTO equity_snapshots(user_id,bucket,equity,captured_at) VALUES(?,?,?,?) ON CONFLICT(user_id,bucket) DO UPDATE SET equity=excluded.equity,captured_at=excluded.captured_at",
+      )
+      .run(user, bucket, equity, now);
+  }
+
+  analytics(user: number) {
+    const sellOrders = this.db
+      .prepare(
+        "SELECT o.id,SUM(f.realized_pnl) pnl FROM orders o JOIN fills f ON f.order_id=o.id WHERE o.user_id=? AND o.side='sell' GROUP BY o.id",
+      )
+      .all(user)
+      .map((row) => Number(row.pnl));
+    const wins = sellOrders.filter((pnl) => pnl > 0);
+    const losses = sellOrders.filter((pnl) => pnl < 0);
+    const grossProfit = wins.reduce((sum, pnl) => sum + pnl, 0);
+    const grossLoss = Math.abs(losses.reduce((sum, pnl) => sum + pnl, 0));
+    const totals = this.db
+      .prepare(
+        "SELECT COUNT(DISTINCT o.id) orders,COALESCE(SUM(f.quantity*f.price),0) turnover,COALESCE(SUM(f.fee),0) fees,COALESCE(SUM(f.tax),0) taxes FROM orders o LEFT JOIN fills f ON f.order_id=o.id WHERE o.user_id=?",
+      )
+      .get(user);
+    const notes = this.db
+      .prepare(
+        "SELECT COUNT(*) total,SUM(CASE WHEN trim(note)<>'' THEN 1 ELSE 0 END) noted FROM orders WHERE user_id=?",
+      )
+      .get(user);
+    const snapshots = this.db
+      .prepare(
+        "SELECT equity FROM equity_snapshots WHERE user_id=? ORDER BY captured_at",
+      )
+      .all(user)
+      .map((row) => Number(row.equity));
+    let peak = 0;
+    let maxDrawdown = 0;
+    for (const equity of snapshots) {
+      peak = Math.max(peak, equity);
+      if (peak > 0) maxDrawdown = Math.min(maxDrawdown, (equity - peak) / peak);
+    }
+    return {
+      orderCount: Number(totals?.orders ?? 0),
+      sellCount: sellOrders.length,
+      winRate: sellOrders.length
+        ? (wins.length / sellOrders.length) * 100
+        : null,
+      averagePnl: sellOrders.length
+        ? sellOrders.reduce((sum, pnl) => sum + pnl, 0) / sellOrders.length
+        : null,
+      profitFactor:
+        grossLoss > 0 ? grossProfit / grossLoss : grossProfit > 0 ? null : 0,
+      turnover: Number(totals?.turnover ?? 0),
+      fees: Number(totals?.fees ?? 0),
+      taxes: Number(totals?.taxes ?? 0),
+      noteRate: Number(notes?.total ?? 0)
+        ? (Number(notes?.noted ?? 0) / Number(notes?.total)) * 100
+        : null,
+      maxDrawdown: snapshots.length > 1 ? maxDrawdown * 100 : null,
+      snapshotCount: snapshots.length,
+    };
+  }
+
+  createCompetition(
+    admin: number,
+    input: {
+      name: string;
+      startsAt: number;
+      endsAt: number;
+      benchmarkStart: number;
+      requestId: string;
+      entries: { userId: number; assets: number; deposits: number }[];
+    },
+  ) {
+    return this.transaction(() => {
+      const previous = this.db
+        .prepare("SELECT * FROM competitions WHERE request_id=?")
+        .get(input.requestId);
+      if (previous) return previous;
+      if (
+        this.db
+          .prepare("SELECT id FROM competitions WHERE status='active'")
+          .get()
+      )
+        throw Error("이미 진행 중인 대회가 있습니다.");
+      if (!input.entries.length) throw Error("참가할 멤버가 없습니다.");
+      if (
+        !Number.isFinite(input.benchmarkStart) ||
+        input.benchmarkStart <= 0 ||
+        input.endsAt <= input.startsAt
+      )
+        throw Error("대회 기간 또는 기준 지수를 확인해주세요.");
+      const result = this.db
+        .prepare(
+          "INSERT INTO competitions(name,status,starts_at,ends_at,benchmark_start,admin_id,request_id) VALUES(?,'active',?,?,?,?,?)",
+        )
+        .run(
+          input.name,
+          input.startsAt,
+          input.endsAt,
+          input.benchmarkStart,
+          admin,
+          input.requestId,
+        );
+      const id = Number(result.lastInsertRowid);
+      const insert = this.db.prepare(
+        "INSERT INTO competition_entries(competition_id,user_id,starting_assets,starting_deposits) VALUES(?,?,?,?)",
+      );
+      for (const entry of input.entries) {
+        if (
+          !Number.isSafeInteger(entry.assets) ||
+          entry.assets < 0 ||
+          !Number.isSafeInteger(entry.deposits) ||
+          entry.deposits < 0
+        )
+          throw Error("참가자 기준 자산이 올바르지 않습니다.");
+        insert.run(id, entry.userId, entry.assets, entry.deposits);
+      }
+      return this.db.prepare("SELECT * FROM competitions WHERE id=?").get(id);
+    });
+  }
+
+  cancelCompetition(admin: number, competitionId: number, reason: string) {
+    return this.transaction(() => {
+      const competition = this.db
+        .prepare("SELECT * FROM competitions WHERE id=?")
+        .get(competitionId);
+      if (!competition) throw Error("대회를 찾을 수 없습니다.");
+      if (competition.status === "cancelled") return competition;
+      if (competition.status !== "active")
+        throw Error("진행 중인 대회만 취소할 수 있습니다.");
+      const cleanReason = reason.trim();
+      if (!cleanReason || cleanReason.length > 200)
+        throw Error("취소 사유를 1~200자로 입력해주세요.");
+      this.db
+        .prepare(
+          "UPDATE competitions SET status='cancelled',cancelled_at=?,cancelled_by=?,cancel_reason=? WHERE id=? AND status='active'",
+        )
+        .run(Date.now(), admin, cleanReason, competitionId);
+      return this.db
+        .prepare("SELECT * FROM competitions WHERE id=?")
+        .get(competitionId);
+    });
+  }
+
+  finishCompetition(
+    competitionId: number,
+    benchmarkEnd: number,
+    entries: { userId: number; assets: number; deposits: number }[],
+  ) {
+    return this.transaction(() => {
+      const competition = this.db
+        .prepare("SELECT * FROM competitions WHERE id=?")
+        .get(competitionId);
+      if (!competition) throw Error("대회를 찾을 수 없습니다.");
+      if (competition.status === "ended") return competition;
+      if (competition.status !== "active")
+        throw Error("진행 중인 대회만 종료할 수 있습니다.");
+      if (!Number.isFinite(benchmarkEnd) || benchmarkEnd <= 0)
+        throw Error("종료 기준 지수가 올바르지 않습니다.");
+      const expected = Number(
+        this.db
+          .prepare(
+            "SELECT COUNT(*) count FROM competition_entries WHERE competition_id=?",
+          )
+          .get(competitionId)!.count,
+      );
+      if (entries.length !== expected)
+        throw Error("모든 참가자의 종료 자산이 필요합니다.");
+      const update = this.db.prepare(
+        "UPDATE competition_entries SET ending_assets=?,ending_deposits=? WHERE competition_id=? AND user_id=?",
+      );
+      for (const entry of entries) {
+        if (!Number.isSafeInteger(entry.assets) || entry.assets < 0)
+          throw Error("종료 자산이 올바르지 않습니다.");
+        update.run(entry.assets, entry.deposits, competitionId, entry.userId);
+      }
+      this.db
+        .prepare(
+          "UPDATE competitions SET status='ended',benchmark_end=? WHERE id=?",
+        )
+        .run(benchmarkEnd, competitionId);
+      return this.db
+        .prepare("SELECT * FROM competitions WHERE id=?")
+        .get(competitionId);
+    });
+  }
+
+  competitions() {
+    return this.db
+      .prepare(
+        "SELECT c.*,COUNT(e.user_id) participant_count FROM competitions c LEFT JOIN competition_entries e ON e.competition_id=c.id GROUP BY c.id ORDER BY c.id DESC",
+      )
+      .all();
+  }
+
+  competitionEntries(id: number) {
+    return this.db
+      .prepare(
+        "SELECT e.*,u.name,u.cash,u.deposits FROM competition_entries e JOIN users u ON u.id=e.user_id WHERE e.competition_id=? ORDER BY e.user_id",
+      )
+      .all(id);
+  }
+
+  applyCorporateAction(
+    admin: number,
+    input: {
+      symbol: string;
+      type: "dividend" | "split";
+      numerator?: number;
+      denominator?: number;
+      cashPerShare?: number;
+      effectiveDate: string;
+      note: string;
+      requestId: string;
+    },
+  ) {
+    return this.transaction(() => {
+      const previous = this.db
+        .prepare("SELECT * FROM corporate_actions WHERE request_id=?")
+        .get(input.requestId);
+      if (previous) return previous;
+      if (input.type === "dividend") {
+        const amount = Number(input.cashPerShare);
+        if (!Number.isSafeInteger(amount) || amount < 0 || amount > 10000000)
+          throw Error("주당 배당금은 0원~1천만 원이어야 합니다.");
+        for (const holding of this.db
+          .prepare(
+            "SELECT user_id,quantity FROM holdings WHERE symbol=? AND quantity>0",
+          )
+          .all(input.symbol)) {
+          const paid = Number(holding.quantity) * amount;
+          if (!Number.isSafeInteger(paid))
+            throw Error("배당 금액 한도를 초과했습니다.");
+          this.db
+            .prepare(
+              "UPDATE users SET cash=cash+?,dividends=dividends+? WHERE id=?",
+            )
+            .run(paid, paid, holding.user_id);
+        }
+      } else {
+        const numerator = Number(input.numerator);
+        const denominator = Number(input.denominator);
+        if (
+          !Number.isSafeInteger(numerator) ||
+          !Number.isSafeInteger(denominator) ||
+          numerator < 1 ||
+          denominator < 1 ||
+          numerator > 1000 ||
+          denominator > 1000 ||
+          numerator === denominator
+        )
+          throw Error("분할 비율을 확인해주세요.");
+        const holdings = this.db
+          .prepare("SELECT user_id,quantity FROM holdings WHERE symbol=?")
+          .all(input.symbol);
+        if (
+          holdings.some(
+            (holding) =>
+              (Number(holding.quantity) * numerator) % denominator !== 0,
+          )
+        )
+          throw Error("단주가 발생하는 계좌가 있어 분할을 적용할 수 없습니다.");
+        for (const holding of holdings)
+          this.db
+            .prepare(
+              "UPDATE holdings SET quantity=? WHERE user_id=? AND symbol=?",
+            )
+            .run(
+              (Number(holding.quantity) * numerator) / denominator,
+              holding.user_id,
+              input.symbol,
+            );
+        this.db
+          .prepare(
+            "UPDATE orders SET status='cancelled',cancel_reason='기업행사로 취소',execution_reason='기업행사 반영으로 미체결 잔량을 취소했습니다.' WHERE symbol=? AND status='pending'",
+          )
+          .run(input.symbol);
+        this.db
+          .prepare("DELETE FROM book_state WHERE symbol=?")
+          .run(input.symbol);
+        this.db
+          .prepare("DELETE FROM liquidity WHERE symbol=?")
+          .run(input.symbol);
+        this.db
+          .prepare("DELETE FROM liquidity_used WHERE symbol=?")
+          .run(input.symbol);
+      }
+      const result = this.db
+        .prepare(
+          "INSERT INTO corporate_actions(symbol,type,numerator,denominator,cash_per_share,effective_date,note,admin_id,request_id) VALUES(?,?,?,?,?,?,?,?,?)",
+        )
+        .run(
+          input.symbol,
+          input.type,
+          input.type === "split" ? (input.numerator ?? null) : null,
+          input.type === "split" ? (input.denominator ?? null) : null,
+          input.type === "dividend" ? (input.cashPerShare ?? null) : null,
+          input.effectiveDate,
+          input.note,
+          admin,
+          input.requestId,
+        );
+      return this.db
+        .prepare("SELECT * FROM corporate_actions WHERE id=?")
+        .get(result.lastInsertRowid);
+    });
+  }
+
   cancel(user: number, id: number) {
     return this.transaction(() => {
       const r = this.db
         .prepare(
-          "UPDATE orders SET status='cancelled' WHERE id=? AND user_id=? AND status='pending'",
+          "UPDATE orders SET status='cancelled',execution_reason='사용자가 미체결 잔량을 취소했습니다.' WHERE id=? AND user_id=? AND status='pending'",
         )
         .run(id, user);
       if (!r.changes) throw Error("취소할 수 있는 주문이 없습니다.");

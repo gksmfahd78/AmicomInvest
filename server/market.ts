@@ -1,7 +1,24 @@
+import { tickSize } from "../src/tradingRules";
 import { realtime } from "./realtime";
-import { readCatalog, downloadCatalog } from "./catalog";
+import { readCatalog, downloadCatalog, CATALOG_VERSION } from "./catalog";
 import type { Stock, Quote, Candle, Book } from "../src/types";
 const sampleStocks: Stock[] = [
+  {
+    symbol: "069500",
+    name: "KODEX 200",
+    market: "KOSPI",
+    sector: "ETF",
+    instrument: "etf",
+    base: 35000,
+  },
+  {
+    symbol: "102110",
+    name: "TIGER 200",
+    market: "KOSPI",
+    sector: "ETF",
+    instrument: "etf",
+    base: 35000,
+  },
   {
     symbol: "005930",
     name: "삼성전자",
@@ -62,8 +79,14 @@ const sampleStocks: Stock[] = [
 const savedCatalog = readCatalog();
 export const stocks: Stock[] = savedCatalog?.stocks ?? sampleStocks;
 export let catalogUpdatedAt = savedCatalog?.updatedAt ?? null;
+export let catalogNeedsRefresh = savedCatalog?.version !== CATALOG_VERSION;
 function prioritize() {
-  const priority = new Map(sampleStocks.map((s, i) => [s.symbol, i]));
+  const priority = new Map(
+    sampleStocks.map((s, i) => [
+      s.symbol,
+      s.instrument === "etf" ? 20 + i : i - 2,
+    ]),
+  );
   stocks.sort(
     (a, b) =>
       (priority.get(a.symbol) ?? 99) - (priority.get(b.symbol) ?? 99) ||
@@ -78,6 +101,7 @@ export function refreshCatalog() {
     .then((c) => {
       stocks.splice(0, stocks.length, ...c.stocks);
       catalogUpdatedAt = c.updatedAt;
+      catalogNeedsRefresh = false;
       prioritize();
     })
     .finally(() => {
@@ -86,6 +110,16 @@ export function refreshCatalog() {
   return syncing;
 }
 export const provider = process.env.MARKET_PROVIDER === "kis" ? "kis" : "demo";
+export const marketDiagnostics = {
+  requests: 0,
+  successes: 0,
+  failures: 0,
+  lastSuccessAt: null as number | null,
+  lastFailureAt: null as number | null,
+  lastLatencyMs: null as number | null,
+  lastPath: null as string | null,
+  lastError: null as string | null,
+};
 const base = "https://openapi.koreainvestment.com:9443";
 let token = "";
 let tokenUntil = 0;
@@ -124,33 +158,62 @@ export async function kis(
   path: string,
   tr: string,
   params: Record<string, string>,
+  section: "quotations" | "ranking" | "finance" | "ksdinfo" = "quotations",
+  product: "domestic-stock" | "etfetn" = "domestic-stock",
 ) {
   const operation = queue.then(async () => {
-    const access = await getToken();
-    await new Promise((r) => setTimeout(r, 150));
-    const res = await fetch(
-      base +
-        "/uapi/domestic-stock/v1/quotations/" +
-        path +
-        "?" +
-        new URLSearchParams(params),
-      {
-        headers: {
-          authorization: "Bearer " + access,
-          appkey: process.env.KIS_APP_KEY!,
-          appsecret: process.env.KIS_APP_SECRET!,
-          tr_id: tr,
-          custtype: "P",
+    const started = Date.now();
+    marketDiagnostics.requests++;
+    marketDiagnostics.lastPath = path;
+    try {
+      const access = await getToken();
+      await new Promise((r) => setTimeout(r, 150));
+      const res = await fetch(
+        base +
+          "/uapi/" +
+          product +
+          "/v1/" +
+          section +
+          "/" +
+          path +
+          "?" +
+          new URLSearchParams(params),
+        {
+          headers: {
+            authorization: "Bearer " + access,
+            appkey: process.env.KIS_APP_KEY!,
+            appsecret: process.env.KIS_APP_SECRET!,
+            tr_id: tr,
+            custtype: "P",
+          },
+          signal: AbortSignal.timeout(10000),
         },
-        signal: AbortSignal.timeout(10000),
-      },
-    );
-    const data = await res.json();
-    if (!res.ok || data.rt_cd !== "0")
-      throw Error(
-        "실제 시세를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.",
       );
-    return data;
+      const data = await res.json().catch(() => null);
+      if (!res.ok || data?.rt_cd !== "0") {
+        const detail = data
+          ? [data.msg_cd, data.msg1].filter(Boolean).join(" · ")
+          : "JSON 응답을 읽을 수 없음";
+        throw Error("KIS " + res.status + " · " + detail);
+      }
+      marketDiagnostics.successes++;
+      marketDiagnostics.lastSuccessAt = Date.now();
+      marketDiagnostics.lastLatencyMs = Date.now() - started;
+      marketDiagnostics.lastError = null;
+      return data;
+    } catch (cause) {
+      marketDiagnostics.failures++;
+      marketDiagnostics.lastFailureAt = Date.now();
+      marketDiagnostics.lastLatencyMs = Date.now() - started;
+      marketDiagnostics.lastError = (
+        cause instanceof Error ? cause.message : "알 수 없는 KIS 오류"
+      ).slice(0, 240);
+      throw Error(
+        cause instanceof Error && cause.name === "TimeoutError"
+          ? "실제 시세 응답이 지연되고 있습니다. 잠시 후 다시 시도해주세요."
+          : "실제 시세를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.",
+      );
+    }
   });
   queue = operation.catch(() => {});
   return operation;
@@ -196,7 +259,10 @@ export async function quote(symbol: string): Promise<Quote> {
     if (provider === "demo") {
       const change =
         Math.round(
-          ((Math.sin(Math.floor(Date.now() / 15000) / 19 + Number(symbol)) *
+          ((Math.sin(
+            Math.floor(Date.now() / 15000) / 19 +
+              Number.parseInt(symbol, /^[0-9]+$/.test(symbol) ? 10 : 36),
+          ) *
             0.012 +
             0.018) *
             stock.base) /
@@ -314,30 +380,96 @@ export async function candles(symbol: string, period = "D"): Promise<Candle[]> {
     return [...older, ...recent];
   });
 }
+
+const koreaDate = (at = Date.now()) =>
+  new Date(at + 9 * 3600000).toISOString().slice(0, 10);
+export async function kospiClose(onOrBefore = koreaDate()) {
+  return cached(
+    "kospi:" + onOrBefore,
+    onOrBefore === koreaDate() ? 60000 : 86400000,
+    async () => {
+      const target = new Date(onOrBefore + "T00:00:00Z");
+      if (!Number.isFinite(target.getTime()))
+        throw Error("KOSPI 기준일이 올바르지 않습니다.");
+      if (provider === "demo") {
+        const day = Math.floor(target.getTime() / 86400000);
+        return {
+          date: onOrBefore,
+          value: Math.round((2650 + Math.sin(day / 17) * 120) * 100) / 100,
+        };
+      }
+      const start = new Date(target.getTime() - 30 * 86400000)
+        .toISOString()
+        .slice(0, 10)
+        .replaceAll("-", "");
+      const data = await kis("inquire-daily-indexchartprice", "FHKUP03500100", {
+        FID_COND_MRKT_DIV_CODE: "U",
+        FID_INPUT_ISCD: "0001",
+        FID_INPUT_DATE_1: start,
+        FID_INPUT_DATE_2: onOrBefore.replaceAll("-", ""),
+        FID_PERIOD_DIV_CODE: "D",
+      });
+      const row = (data.output2 || [])
+        .filter(
+          (item: Record<string, string>) =>
+            /^\d{8}$/.test(item.stck_bsop_date) &&
+            item.stck_bsop_date <= onOrBefore.replaceAll("-", "") &&
+            Number(item.bstp_nmix_prpr) > 0,
+        )
+        .sort((a: Record<string, string>, b: Record<string, string>) =>
+          b.stck_bsop_date.localeCompare(a.stck_bsop_date),
+        )[0];
+      if (!row) throw Error("KOSPI 기준 지수를 불러오지 못했습니다.");
+      return {
+        date:
+          row.stck_bsop_date.slice(0, 4) +
+          "-" +
+          row.stck_bsop_date.slice(4, 6) +
+          "-" +
+          row.stck_bsop_date.slice(6, 8),
+        value: Number(row.bstp_nmix_prpr),
+      };
+    },
+  );
+}
+
 export async function book(symbol: string): Promise<Book> {
-  known(symbol);
+  const stock = known(symbol);
   const live = realtime.books.get(symbol);
   if (live && Date.now() - live.receivedAt < 10000) return live;
   return cached("b" + symbol, 10000, async () => {
     if (provider === "demo") {
       const q = await quote(symbol);
+      const step = stock.instrument === "etf" ? tickSize(q.price, "etf") : 100;
       return {
         receivedAt: Date.now(),
         asks: Array.from({ length: 10 }, (_, i) => ({
-          price: q.price + (i + 1) * 100,
+          price: q.price + (i + 1) * step,
           quantity: 3200 + i * 831,
         })),
         bids: Array.from({ length: 10 }, (_, i) => ({
-          price: q.price - i * 100,
+          price: q.price - i * step,
           quantity: 2700 + i * 621,
         })),
       };
     }
-    const d = (
-      await kis("inquire-asking-price-exp-ccn", "FHKST01010200", params(symbol))
-    ).output1;
+    const response = await kis(
+      "inquire-asking-price-exp-ccn",
+      "FHKST01010200",
+      params(symbol),
+    );
+    const receivedAt = Date.now();
+    const d = response.output1;
+    // REST books do not include cumulative volume. Pair a current quote when available.
+    const q = await quote(symbol).catch(() => null);
     return {
-      receivedAt: Date.now(),
+      receivedAt,
+      exchangeTime: d.aspr_acpt_hour,
+      marketPhase: d.new_mkop_cls_code,
+      volume: q && Date.now() - q.receivedAt < 10000 ? q.volume : undefined,
+      volumeDate: q?.tradingDate
+        ? q.tradingDate.replace(/^(\d{4})(\d{2})(\d{2})$/, "$1-$2-$3")
+        : koreaDate(),
       asks: Array.from({ length: 10 }, (_, i) => ({
         price: Number(d["askp" + (i + 1)]),
         quantity: Number(d["askp_rsqn" + (i + 1)]),

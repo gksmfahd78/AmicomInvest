@@ -25,6 +25,11 @@ export function parseTick(raw: string, now = Date.now()): Tick[] {
         receivedAt: now,
         exchangeTime: d[1],
         session: d[2],
+        volume:
+          /^\d+$/.test(d[53]) && Number.isSafeInteger(n(53)) && n(53) >= 0
+            ? n(53)
+            : undefined,
+        volumeDate: new Date(now + 9 * 3600000).toISOString().slice(0, 10),
         asks: levels(3, 23),
         bids: levels(13, 33),
       };
@@ -191,6 +196,16 @@ export class Realtime extends EventEmitter {
         send(s, "1");
         this.sent.add(s);
       }
+  }
+  diagnostics() {
+    return {
+      status: this.status,
+      connected: this.ws?.readyState === WebSocket.OPEN,
+      wantedSymbols: this.wanted.length,
+      subscribedSymbols: this.sent.size,
+      lastMessageAt: this.lastMessage || null,
+      retryAt: this.retryAt || null,
+    };
   }
   mode(symbol: string) {
     const at = Math.max(

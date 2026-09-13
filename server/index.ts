@@ -1,4 +1,14 @@
+import { etfInfo } from "./etf";
+import { FinancialsService } from "./financials";
+import { ResearchService } from "./research";
+import { DartService } from "./dart";
+import { commonFinancialDate } from "../src/researchTypes";
+import { AccountValuator, PerformanceStore } from "./performance";
+import { JournalStore, planSchema, reviewSchema } from "./journal";
+import { StockNewsStore } from "./news";
 import "dotenv/config";
+import { MarketAnalysisStore } from "./market-analysis";
+import { ThemeCatalogStore } from "./themes";
 import { realtime, type Tick } from "./realtime";
 import { TradingRules } from "./trading";
 import { dayExpiry } from "../src/tradingRules";
@@ -8,10 +18,11 @@ import { randomBytes, createHash } from "node:crypto";
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { z } from "zod";
-import { Store, verifyPassword } from "./db";
+import { Store, competitionPerformance, verifyPassword } from "./db";
 import {
   stocks,
   catalogUpdatedAt,
+  catalogNeedsRefresh,
   refreshCatalog,
   quote,
   candles,
@@ -20,9 +31,16 @@ import {
   provider,
   known,
   regularHours,
+  marketDiagnostics,
+  kospiClose,
+  kis,
 } from "./market";
 import type { User } from "../src/types";
-const store = new Store(process.env.DATABASE_PATH || "./data/study.sqlite");
+const store = new Store(
+  process.env.DATABASE_PATH || "./data/study.sqlite",
+  undefined,
+  (symbol) => known(symbol).instrument ?? "stock",
+);
 if (!store.db.prepare("SELECT id FROM users WHERE role='admin'").get())
   store.createUser(
     process.env.ADMIN_USERNAME || "admin",
@@ -30,8 +48,37 @@ if (!store.db.prepare("SELECT id FROM users WHERE role='admin'").get())
     process.env.ADMIN_PASSWORD || "Study!2026",
     "admin",
   );
+const themeCatalog = new ThemeCatalogStore();
+const financials = new FinancialsService(kis, provider);
+const research = new ResearchService(kis, provider);
+const dart = new DartService(
+  process.env.DART_API_KEY || process.env.OPENDART_API_KEY,
+);
+const marketAnalysis = new MarketAnalysisStore();
+const stockNews = new StockNewsStore();
 const drawingsStore = new DrawingsStore(store);
 const tradingRules = new TradingRules(store);
+const performance = new PerformanceStore(store);
+const journal = new JournalStore(store);
+const valuator = new AccountValuator(store, performance, quote, async () => {
+  // Demo indices are explicitly synthetic, matching the demo provider.
+  if (provider === "demo") return { kospi: 2500, kosdaq: 800 };
+  const values = await Promise.allSettled(
+    ["0001", "1001"].map(async (code) => {
+      const data = await kis("inquire-index-price", "FHPUP02100000", {
+        FID_COND_MRKT_DIV_CODE: "U",
+        FID_INPUT_ISCD: code,
+      });
+      const price = Number(data.output?.bstp_nmix_prpr);
+      if (!Number.isFinite(price) || price <= 0) throw Error("지수 시세 누락");
+      return price;
+    }),
+  );
+  return {
+    kospi: values[0].status === "fulfilled" ? values[0].value : null,
+    kosdaq: values[1].status === "fulfilled" ? values[1].value : null,
+  };
+});
 const app = express();
 app.disable("x-powered-by");
 app.use("/api/drawings", express.json({ limit: "12mb" }));
@@ -194,8 +241,79 @@ setInterval(() => {
   subscriptions();
 }, 5000).unref();
 
+async function portfolioValue(userId: number, cash: number) {
+  let assets = cash;
+  for (const holding of store.db
+    .prepare(
+      "SELECT symbol,quantity FROM holdings WHERE user_id=? AND quantity>0",
+    )
+    .all(userId))
+    assets +=
+      Number(holding.quantity) * (await quote(String(holding.symbol))).price;
+  if (!Number.isSafeInteger(assets) || assets < 0)
+    throw Error("평가자산 한도를 초과했습니다.");
+  return assets;
+}
+
+const koreaDate = (at = Date.now()) =>
+  new Date(at + 9 * 3600000).toISOString().slice(0, 10);
+let competitionSync: Promise<void> | null = null;
+async function finishDueCompetitions() {
+  if (competitionSync) return competitionSync;
+  competitionSync = (async () => {
+    const due = store.db
+      .prepare(
+        "SELECT * FROM competitions WHERE status='active' AND ends_at<=? ORDER BY ends_at",
+      )
+      .all(Date.now());
+    for (const competition of due) {
+      const entries = store.competitionEntries(Number(competition.id));
+      const ending = await Promise.all(
+        entries.map(async (entry) => ({
+          userId: Number(entry.user_id),
+          assets: await portfolioValue(
+            Number(entry.user_id),
+            Number(entry.cash),
+          ),
+          deposits: Number(entry.deposits),
+        })),
+      );
+      const benchmark = await kospiClose(
+        koreaDate(Number(competition.ends_at)),
+      );
+      store.finishCompetition(Number(competition.id), benchmark.value, ending);
+    }
+  })().finally(() => {
+    competitionSync = null;
+  });
+  return competitionSync;
+}
+setInterval(() => void finishDueCompetitions().catch(() => {}), 5000).unref();
+setTimeout(() => void finishDueCompetitions().catch(() => {}), 1000).unref();
+
+function competitionList() {
+  return store.competitions().map((row) => {
+    const start = Number(row.benchmark_start);
+    const end = row.benchmark_end === null ? null : Number(row.benchmark_end);
+    return {
+      ...row,
+      id: Number(row.id),
+      starts_at: Number(row.starts_at),
+      ends_at: Number(row.ends_at),
+      benchmark_start: start,
+      benchmark_end: end,
+      benchmark_rate: end === null ? null : ((end - start) / start) * 100,
+      participant_count: Number(row.participant_count),
+      status:
+        row.status === "active" && Number(row.ends_at) <= Date.now()
+          ? "finalizing"
+          : row.status,
+    };
+  });
+}
+
 app.get("/api/meta", (_req, res) =>
-  res.json({ provider, inviteRequired: true }),
+  res.json({ provider, inviteRequired: true, tradingCosts: store.costs }),
 );
 app.get("/api/me", auth, (_req, res) => res.json({ user: res.locals.user }));
 const credentials = z.object({
@@ -242,6 +360,33 @@ app.post("/api/logout", (_req, res) => {
   res.clearCookie("study_session", { path: "/" });
   res.json({ ok: true });
 });
+app.get("/api/stock-news", auth, async (req, res) => {
+  const symbol = z
+    .string()
+    .regex(/^[A-Z0-9]{6}$/)
+    .parse(req.query.symbol);
+  const stock = stocks.find((stock) => stock.symbol === symbol);
+  if (!stock) {
+    res.status(404).json({ error: "지원하지 않는 종목입니다." });
+    return;
+  }
+  try {
+    res.json(await stockNews.get(stock));
+  } catch {
+    res.status(503).json({
+      error: "뉴스를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.",
+    });
+  }
+});
+app.get("/api/stock-themes", auth, async (_req, res) => {
+  try {
+    res.json(await themeCatalog.get());
+  } catch {
+    res.status(503).json({
+      error: "테마 분류를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.",
+    });
+  }
+});
 app.get("/api/stocks", auth, (_req, res) =>
   res.json({ stocks, updatedAt: catalogUpdatedAt }),
 );
@@ -261,6 +406,9 @@ app.get("/api/quotes", auth, async (req, res) => {
     throw Error("시세는 한 번에 최대 10종목까지 조회할 수 있습니다.");
   symbols.forEach(known);
   const data = await Promise.allSettled(symbols.map(quote));
+  const failedSymbols = data.flatMap((result, index) =>
+    result.status === "rejected" ? [symbols[index]] : [],
+  );
   res.json({
     quotes: data
       .filter(
@@ -268,11 +416,100 @@ app.get("/api/quotes", auth, async (req, res) => {
           x.status === "fulfilled",
       )
       .map((x) => x.value),
-    error: data.some((x) => x.status === "rejected")
-      ? "일부 시세를 불러오지 못했습니다. API 설정과 연결을 확인해주세요."
+    failedSymbols,
+    error: failedSymbols.length
+      ? failedSymbols.length +
+        "개 종목의 시세를 불러오지 못했습니다. 잠시 후 다시 조회해주세요."
       : null,
   });
 });
+app.get("/api/etf/:symbol", auth, async (req, res) => {
+  res.json(await etfInfo(String(req.params.symbol)));
+});
+app.get("/api/financials/:symbol", auth, async (req, res) => {
+  const symbol = String(req.params.symbol);
+  const stock = known(symbol);
+  if (stock.instrument === "etf") {
+    res
+      .status(400)
+      .json({ error: "ETF는 기업 재무제표 대신 상품 정보를 확인해주세요." });
+    return;
+  }
+  const period = z
+    .enum(["annual", "quarter"])
+    .parse(req.query.period || "annual");
+  res.json(await financials.get(symbol, period));
+});
+
+app.get("/api/research/:symbol/:section", auth, async (req, res) => {
+  const symbol = String(req.params.symbol);
+  const stock = known(symbol);
+  if (stock.instrument === "etf") {
+    res.status(400).json({ error: "ETF는 상품 정보에서 확인해주세요." });
+    return;
+  }
+  const section = z
+    .enum(["flows", "estimates", "dividends", "peers", "filings", "dart"])
+    .parse(req.params.section);
+  if (section === "peers") {
+    const query = z
+      .string()
+      .max(30)
+      .parse(req.query.symbols ?? "");
+    const symbols = [...new Set([symbol, ...query.split(",").filter(Boolean)])];
+    if (symbols.length > 3)
+      throw Error("기업 비교는 기준 종목을 포함해 최대 3개입니다.");
+    const selected = symbols.map((code) => {
+      const item = known(code);
+      if (item.instrument === "etf")
+        throw Error("기업 비교에서는 주식만 선택할 수 있습니다.");
+      return item;
+    });
+    const companies = await Promise.all(
+      selected.map(async (item) => {
+        const [profile, data] = await Promise.all([
+          research.profile(item.symbol),
+          financials.get(item.symbol, "annual"),
+        ]);
+        return {
+          symbol: item.symbol,
+          name: item.name,
+          profile,
+          financials: data,
+        };
+      }),
+    );
+    res.json({
+      symbol,
+      section,
+      status: "ok",
+      source: provider,
+      receivedAt: Date.now(),
+      data: { date: commonFinancialDate(companies), companies },
+    });
+    return;
+  }
+  const result =
+    section === "dart"
+      ? await dart.statement(
+          symbol,
+          z.coerce
+            .number()
+            .int()
+            .min(2015)
+            .max(new Date().getUTCFullYear())
+            .parse(req.query.year ?? new Date().getUTCFullYear() - 1),
+          z
+            .enum(["11011", "11013", "11012", "11014"])
+            .parse(req.query.report ?? "11011"),
+          z.enum(["CFS", "OFS"]).parse(req.query.basis ?? "CFS"),
+        )
+      : section === "filings"
+        ? await dart.filings(symbol)
+        : await research[section](symbol);
+  res.json({ symbol, section, ...result });
+});
+
 app.get("/api/stock/:symbol", auth, async (req, res) => {
   const symbol = String(req.params.symbol);
   known(symbol);
@@ -282,7 +519,12 @@ app.get("/api/stock/:symbol", auth, async (req, res) => {
     candles(symbol, period),
     book(symbol),
   ]);
-  res.json({ quote: q, candles: c, book: b });
+  res.json({
+    quote: q,
+    candles: c,
+    book: b,
+    execution: await tradingRules.inspect(symbol, b),
+  });
 });
 
 app.get("/api/drawings/:symbol", auth, (req, res) => {
@@ -323,14 +565,6 @@ app.get("/api/history/:symbol", auth, async (req, res) => {
   const bars = await candlePage(symbol, period, before);
   res.json({ candles: bars, hasMore: bars.length > 0 });
 });
-async function tradable(symbol: string) {
-  try {
-    await tradingRules.check(symbol);
-    return true;
-  } catch {
-    return false;
-  }
-}
 app.get("/api/account", auth, async (_req, res) => {
   store.expire();
   const u = store.user(res.locals.user.id);
@@ -346,9 +580,12 @@ app.get("/api/account", auth, async (_req, res) => {
         price = (await quote(String(h.symbol))).price;
       } catch {}
       return {
-        ...h,
+        symbol: String(h.symbol),
+        quantity: Number(h.quantity),
+        cost: Number(h.cost),
         price,
         name: known(String(h.symbol)).name,
+        instrument: store.instrument(String(h.symbol)),
         reserved: store.reservedShares(u.id, String(h.symbol)),
       };
     }),
@@ -358,6 +595,7 @@ app.get("/api/account", auth, async (_req, res) => {
     available: u.cash - store.reservedCash(u.id),
     deposits: u.deposits,
     realized: u.realized,
+    dividends: u.dividends,
     holdings,
     orders: store.db
       .prepare(
@@ -368,11 +606,54 @@ app.get("/api/account", auth, async (_req, res) => {
         ...o,
         fills: store.db
           .prepare(
-            "SELECT id,quantity,price,created_at FROM fills WHERE order_id=? ORDER BY id",
+            "SELECT id,quantity,price,fee,tax,realized_pnl,cost_basis,created_at,book_received_at,reference_price,available_quantity,execution_note FROM fills WHERE order_id=? ORDER BY id",
           )
           .all(o.id!),
       })),
   });
+});
+app.get("/api/analytics", auth, (_req, res) => {
+  const report = performance.report(res.locals.user.id);
+  res.json({
+    ...store.analytics(res.locals.user.id),
+    maxDrawdown: report.maxDrawdown,
+    snapshotCount: report.count,
+  });
+});
+app.get("/api/performance", auth, (req, res) => {
+  const range = z
+    .enum(["all", "day", "week", "month"])
+    .parse(req.query.range || "all");
+  const group = z
+    .enum(["day", "week", "month"])
+    .parse(req.query.group || "day");
+  res.json({
+    ...performance.report(res.locals.user.id, range, group),
+    source: provider,
+  });
+});
+app.get("/api/journal", auth, (req, res) => {
+  const symbol = z
+    .string()
+    .regex(/^$|^[A-Z0-9]{6}$/)
+    .parse(req.query.symbol || "");
+  const page = z.coerce
+    .number()
+    .int()
+    .min(0)
+    .max(100000)
+    .parse(req.query.page || 0);
+  const filter = z
+    .enum(["all", "unreviewed", "reviewed"])
+    .parse(req.query.filter || "all");
+  res.json(journal.list(res.locals.user.id, symbol, page, filter));
+});
+app.post("/api/journal/:id", auth, (req, res) => {
+  const id = z.coerce.number().int().positive().parse(req.params.id);
+  const input = z
+    .object({ revision: z.number().int().nonnegative(), review: reviewSchema })
+    .parse(req.body);
+  res.json(journal.save(res.locals.user.id, id, input.revision, input.review));
 });
 const orderSchema = z
   .object({
@@ -382,12 +663,14 @@ const orderSchema = z
     quantity: z.number().int().min(1).max(1000000),
     limitPrice: z.number().int().min(1).max(100000000).optional(),
     note: z.string().max(300).default(""),
+    plan: planSchema.default({}),
     requestId: z.string().uuid(),
   })
   .refine((x) => x.type !== "limit" || x.limitPrice !== undefined, {
     message: "지정가를 입력해주세요.",
   });
 app.post("/api/orders", auth, async (req, res) => {
+  await finishDueCompetitions();
   const input = orderSchema.parse(req.body);
   known(input.symbol);
   const previous = store.db
@@ -397,26 +680,31 @@ app.post("/api/orders", auth, async (req, res) => {
     res.json({ order: previous });
     return;
   }
+  const q = await book(input.symbol);
   await tradingRules.check(
     input.symbol,
     input.type === "limit" ? input.limitPrice : undefined,
+    q,
   );
-  const q = await book(input.symbol);
   if (Date.now() - q.receivedAt > 20000)
     throw Error("시세가 오래되어 주문을 처리할 수 없습니다.");
-  res.json({
-    order: store.place(
+  const order = store.transaction(() => {
+    const result = store.place(
       res.locals.user.id,
       {
         ...input,
         expiresAt: provider === "demo" ? Date.now() + 86400000 : dayExpiry(),
       },
       q,
-    ),
+    )!;
+    journal.capture(res.locals.user.id, Number(result.id), input.plan, q);
+    return result;
   });
+  res.json({ order });
 });
 
 app.post("/api/orders/:id/amend", auth, async (req, res) => {
+  await finishDueCompetitions();
   const id = z.coerce.number().int().positive().parse(req.params.id);
   const input = z
     .object({
@@ -439,36 +727,89 @@ app.post("/api/orders/:id/amend", auth, async (req, res) => {
     res.json({ order: existing });
     return;
   }
-  await tradingRules.check(String(old.symbol), input.limitPrice);
-  res.json({
-    order: store.amend(
+  const q = await book(String(old.symbol));
+  await tradingRules.check(String(old.symbol), input.limitPrice, q);
+  const order = store.transaction(() => {
+    const result = store.amend(res.locals.user.id, id, input, q)!;
+    journal.capture(
       res.locals.user.id,
+      Number(result.id),
+      { horizon: "", invalidation: "", source: "" },
+      q,
       id,
-      input,
-      await book(String(old.symbol)),
-    ),
+    );
+    return result;
   });
+  res.json({ order });
 });
 app.post("/api/orders/:id/cancel", auth, (req, res) => {
   const id = z.coerce.number().int().positive().parse(req.params.id);
   store.cancel(res.locals.user.id, id);
   res.json({ ok: true });
 });
-app.get("/api/admin/members", admin, (_req, res) =>
+app.get("/api/admin/members", admin, async (_req, res) => {
+  await finishDueCompetitions().catch(() => {});
+  const users = store.db
+    .prepare(
+      "SELECT id,username,name,role,cash,deposits FROM users ORDER BY id",
+    )
+    .all();
+  const members = await Promise.all(
+    users.map(async (member) => {
+      const id = Number(member.id);
+      const cash = Number(member.cash);
+      const deposits = Number(member.deposits);
+      const available = cash - store.reservedCash(id);
+      let assets: number | null = null;
+      try {
+        assets = await portfolioValue(id, cash);
+      } catch {}
+      return {
+        ...member,
+        cash,
+        deposits,
+        available,
+        assets,
+        profit: assets === null ? null : assets - deposits,
+      };
+    }),
+  );
+  const complete = members.every((member) => member.assets !== null);
+  const assets = complete
+    ? members.reduce((sum, member) => sum + Number(member.assets), 0)
+    : null;
+  const deposits = members.reduce((sum, member) => sum + member.deposits, 0);
+  const available = members.reduce((sum, member) => sum + member.available, 0);
   res.json({
-    members: store.db
-      .prepare(
-        "SELECT id,username,name,role,cash,deposits FROM users ORDER BY id",
-      )
-      .all(),
+    members,
+    summary: {
+      assets,
+      profit: assets === null ? null : assets - deposits,
+      available,
+      deposits,
+      reserved: members.reduce(
+        (sum, member) => sum + member.cash - member.available,
+        0,
+      ),
+    },
     grants: store.db
       .prepare(
         "SELECT g.id,u.name,g.amount,g.note,g.created_at FROM grants g JOIN users u ON u.id=g.user_id ORDER BY g.id DESC LIMIT 100",
       )
       .all(),
-  }),
-);
-app.post("/api/admin/grants", admin, (req, res) => {
+    corporateActions: store.db
+      .prepare("SELECT * FROM corporate_actions ORDER BY id DESC LIMIT 100")
+      .all(),
+    marketStatus: {
+      provider,
+      rest: { ...marketDiagnostics },
+      realtime: realtime.diagnostics(),
+    },
+    competitions: competitionList(),
+  });
+});
+app.post("/api/admin/grants", admin, async (req, res) => {
+  await finishDueCompetitions();
   const input = z
     .object({
       userId: z.number().int().positive(),
@@ -477,49 +818,216 @@ app.post("/api/admin/grants", admin, (req, res) => {
       requestId: z.string().uuid(),
     })
     .parse(req.body);
-  store.grant(
-    res.locals.user.id,
-    input.userId,
-    input.amount,
-    input.note,
-    input.requestId,
-  );
+  const [prices, marks] = await Promise.all([
+    valuator.prices(input.userId),
+    valuator.indices().catch(() => ({ kospi: null, kosdaq: null })),
+  ]);
+  store.transaction(() => {
+    if (
+      store.db
+        .prepare("SELECT id FROM grants WHERE request_id=?")
+        .get(input.requestId)
+    )
+      return;
+    const now = Date.now();
+    let equity: number | null = null;
+    try {
+      equity = performance.value(input.userId, prices, now);
+    } catch {
+      /* Grant can proceed; unavailable flow boundaries will be reported as a gap. */
+    }
+    if (equity !== null)
+      performance.record(input.userId, equity, now, "flow_before", marks);
+    store.grant(
+      res.locals.user.id,
+      input.userId,
+      input.amount,
+      input.note,
+      input.requestId,
+    );
+    if (equity !== null)
+      performance.record(
+        input.userId,
+        equity + input.amount,
+        now,
+        "flow_after",
+        marks,
+      );
+  });
   res.json({ ok: true });
 });
-app.get("/api/ranking", auth, async (_req, res) => {
-  const members = store.db
-    .prepare("SELECT id,name,cash,deposits FROM users")
+app.post("/api/admin/competitions", admin, async (req, res) => {
+  const input = z
+    .object({
+      name: z.string().trim().min(1).max(60),
+      endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      requestId: z.string().uuid(),
+    })
+    .parse(req.body);
+  const previous = store.db
+    .prepare("SELECT * FROM competitions WHERE request_id=?")
+    .get(input.requestId);
+  if (previous) {
+    res.json({ competition: previous });
+    return;
+  }
+  await finishDueCompetitions();
+  const startsAt = Date.now();
+  const endsAt = Date.parse(input.endDate + "T06:30:00.000Z");
+  if (!Number.isFinite(endsAt) || endsAt <= startsAt)
+    throw Error("종료일은 오늘 장 마감 이후 또는 미래 날짜여야 합니다.");
+  const users = store.db
+    .prepare("SELECT id,cash,deposits FROM users ORDER BY id")
     .all();
+  const entries = await Promise.all(
+    users.map(async (member) => ({
+      userId: Number(member.id),
+      assets: await portfolioValue(Number(member.id), Number(member.cash)),
+      deposits: Number(member.deposits),
+    })),
+  );
+  const benchmark = await kospiClose();
+  const competition = store.createCompetition(res.locals.user.id, {
+    name: input.name,
+    startsAt,
+    endsAt,
+    benchmarkStart: benchmark.value,
+    requestId: input.requestId,
+    entries,
+  });
+  res.json({ competition });
+});
+app.post("/api/admin/competitions/:id/cancel", admin, async (req, res) => {
+  await finishDueCompetitions();
+  const id = z.coerce.number().int().positive().parse(req.params.id);
+  const input = z
+    .object({ reason: z.string().trim().min(1).max(200) })
+    .parse(req.body);
+  const competition = store.cancelCompetition(
+    res.locals.user.id,
+    id,
+    input.reason,
+  );
+  res.json({ competition });
+});
+
+app.post("/api/admin/corporate-actions", admin, async (req, res) => {
+  await finishDueCompetitions();
+  const input = z
+    .object({
+      symbol: z.string().regex(/^[A-Z0-9]{6}$/),
+      type: z.enum(["dividend", "split"]),
+      numerator: z.number().int().min(1).max(1000).optional(),
+      denominator: z.number().int().min(1).max(1000).optional(),
+      cashPerShare: z.number().int().min(0).max(10000000).optional(),
+      effectiveDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      note: z.string().trim().min(1).max(200),
+      requestId: z.string().uuid(),
+    })
+    .refine(
+      (value) =>
+        value.type === "dividend"
+          ? value.cashPerShare !== undefined
+          : value.numerator !== undefined && value.denominator !== undefined,
+      { message: "기업행사 값을 확인해주세요." },
+    )
+    .parse(req.body);
+  known(input.symbol);
+  const action = store.applyCorporateAction(res.locals.user.id, input);
+  res.json({ action });
+});
+app.get("/api/ranking", auth, async (req, res) => {
+  await finishDueCompetitions().catch(() => {});
+  const competitions = competitionList();
+  const requested = req.query.competitionId
+    ? z.coerce.number().int().positive().parse(req.query.competitionId)
+    : null;
+  const competition = requested
+    ? competitions.find((item) => item.id === requested)
+    : (competitions.find((item) => item.status !== "cancelled") ??
+      competitions[0]);
+  if (!competition) {
+    res.json({ competition: null, competitions, members: [] });
+    return;
+  }
+  const benchmarkNow =
+    competition.status === "cancelled"
+      ? null
+      : competition.status === "ended"
+        ? competition.benchmark_end
+        : (await kospiClose()).value;
+  const benchmarkRate =
+    benchmarkNow === null
+      ? null
+      : ((benchmarkNow - competition.benchmark_start) /
+          competition.benchmark_start) *
+        100;
   const rows = await Promise.all(
-    members.map(async (m) => {
-      let assets = Number(m.cash);
-      let complete = true;
-      for (const h of store.db
-        .prepare(
-          "SELECT symbol,quantity FROM holdings WHERE user_id=? AND quantity>0",
-        )
-        .all(m.id as number)) {
+    store.competitionEntries(competition.id).map(async (entry) => {
+      let assets: number | null =
+        competition.status === "ended" && entry.ending_assets !== null
+          ? Number(entry.ending_assets)
+          : null;
+      const deposits =
+        competition.status === "ended" && entry.ending_deposits !== null
+          ? Number(entry.ending_deposits)
+          : Number(entry.deposits);
+      if (
+        competition.status === "active" ||
+        competition.status === "finalizing"
+      )
         try {
-          assets += Number(h.quantity) * (await quote(String(h.symbol))).price;
+          assets = await portfolioValue(
+            Number(entry.user_id),
+            Number(entry.cash),
+          );
         } catch {
-          complete = false;
+          assets = null;
         }
-      }
+      const startingAssets = Number(entry.starting_assets);
+      const netGrants = Math.max(0, deposits - Number(entry.starting_deposits));
+      const performance =
+        assets === null || benchmarkRate === null
+          ? { netGrants, rate: null, excessRate: null }
+          : competitionPerformance(
+              startingAssets,
+              Number(entry.starting_deposits),
+              assets,
+              deposits,
+              benchmarkRate,
+            );
       return {
-        id: m.id,
-        name: m.name,
-        deposits: m.deposits,
-        assets: complete ? assets : null,
-        rate:
-          complete && Number(m.deposits) > 0
-            ? ((assets - Number(m.deposits)) / Number(m.deposits)) * 100
-            : null,
+        id: Number(entry.user_id),
+        name: String(entry.name),
+        startingAssets,
+        assets,
+        ...performance,
       };
     }),
   );
   res.json({
+    competition: { ...competition, benchmark_rate: benchmarkRate },
+    competitions,
     members: rows.sort((a, b) => (b.rate ?? -Infinity) - (a.rate ?? -Infinity)),
   });
+});
+app.get("/api/market-analysis", auth, async (req, res) => {
+  const query = z
+    .object({
+      market: z.enum(["ALL", "KOSPI", "KOSDAQ"]).default("ALL"),
+      date: z
+        .string()
+        .regex(/^\d{4}-\d{2}-\d{2}$/)
+        .optional(),
+    })
+    .parse(req.query);
+  try {
+    res.json(await marketAnalysis.get(query.market, query.date));
+  } catch (error) {
+    res.status(503).json({
+      error: error instanceof Error ? error.message : "시장 분석 조회 실패",
+    });
+  }
 });
 app.get("/api/health", (_req, res) => res.json({ ok: true, provider }));
 app.use("/api", (_req, res) =>
@@ -559,11 +1067,17 @@ async function matchSymbol(symbol: string) {
   if (matchingSymbols.has(symbol)) return;
   matchingSymbols.add(symbol);
   try {
-    if (await tradable(symbol)) {
-      const b = await book(symbol);
-      if (Date.now() - b.receivedAt < 20000) store.match(symbol, b);
-    }
-  } catch {
+    await finishDueCompetitions();
+    const b = await book(symbol);
+    await tradingRules.check(symbol, undefined, b);
+    store.match(symbol, b);
+  } catch (error) {
+    store.defer(
+      symbol,
+      error instanceof Error
+        ? error.message
+        : "거래 상태 확인을 기다리고 있습니다.",
+    );
   } finally {
     matchingSymbols.delete(symbol);
   }
@@ -631,7 +1145,11 @@ app.listen(
     ),
 );
 
-if (!catalogUpdatedAt || Date.now() - Date.parse(catalogUpdatedAt) > 86400000)
+if (
+  catalogNeedsRefresh ||
+  !catalogUpdatedAt ||
+  Date.now() - Date.parse(catalogUpdatedAt) > 86400000
+)
   refreshCatalog().catch(() =>
     console.warn("전체 종목 갱신 실패: 저장된 목록을 유지합니다."),
   );
@@ -642,3 +1160,57 @@ setInterval(
     ),
   86400000,
 ).unref();
+
+void themeCatalog
+  .get()
+  .catch(() =>
+    console.warn(
+      "테마 분류 초기 조회 실패: 종목 검색은 계속 사용할 수 있습니다.",
+    ),
+  );
+setInterval(() => {
+  void themeCatalog.refresh().catch(() => {});
+}, 86400000).unref();
+
+let collectingAnalysis = false;
+async function collectAnalysisSnapshots() {
+  if (collectingAnalysis) return;
+  collectingAnalysis = true;
+  try {
+    for (const market of ["ALL", "KOSPI", "KOSDAQ"] as const)
+      await marketAnalysis.get(market).catch(() => {});
+  } finally {
+    collectingAnalysis = false;
+  }
+}
+void collectAnalysisSnapshots();
+setInterval(() => {
+  const now = new Date(Date.now() + 9 * 3600000);
+  const minutes = now.getUTCHours() * 60 + now.getUTCMinutes();
+  if (
+    now.getUTCDay() > 0 &&
+    now.getUTCDay() < 6 &&
+    minutes >= 540 &&
+    minutes <= 950
+  )
+    void collectAnalysisSnapshots();
+}, 300000).unref();
+
+// Capture independently of account views, including a startup baseline and closing observation.
+void valuator
+  .collect()
+  .catch(() => console.warn("계좌 평가 수집에 실패했습니다."));
+setInterval(() => {
+  const kst = new Date(Date.now() + 9 * 3600000);
+  const minute = kst.getUTCHours() * 60 + kst.getUTCMinutes();
+  if (
+    provider === "demo" ||
+    (kst.getUTCDay() > 0 &&
+      kst.getUTCDay() < 6 &&
+      minute >= 540 &&
+      minute <= 935)
+  )
+    void valuator
+      .collect()
+      .catch(() => console.warn("계좌 평가 수집에 실패했습니다."));
+}, 300000).unref();

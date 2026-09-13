@@ -22,7 +22,7 @@ const input = (extra: Record<string, unknown> = {}) => ({
   ...extra,
 });
 function setup() {
-  const s = new Store(":memory:");
+  const s = new Store(":memory:", { commissionBps: 0, sellTaxBps: 0 });
   const a = s.createUser("admin", "관리자", "password123", "admin"),
     u = s.createUser("member", "멤버", "password123");
   s.grant(a.id, u.id, 1000000, "지급", randomUUID());
@@ -160,5 +160,41 @@ test("잘못된 수량과 빈 호가의 시장가 주문 차단", () => {
     /잔량/,
   );
   assert.equal(s.user(u.id).cash, 1000000);
+  s.db.close();
+});
+
+test("거래비용은 예약금·취득원가·매도대금·실현손익에 반영", () => {
+  const s = new Store(":memory:", { commissionBps: 10, sellTaxBps: 20 });
+  const u = s.createUser("cost-user", "비용 테스트", "password123");
+  s.grant(u.id, u.id, 1000000, "지급", randomUUID());
+  const waiting = s.place(
+    u.id,
+    input({ quantity: 10, limitPrice: 9900 }),
+    book([{ price: 10100, quantity: 10 }]),
+  )!;
+  assert.equal(s.reservedCash(u.id), 99099);
+  s.cancel(u.id, Number(waiting.id));
+
+  const bought = s.place(
+    u.id,
+    input({ type: "market", quantity: 10 }),
+    book([{ price: 10000, quantity: 10 }], [{ price: 9900, quantity: 10 }]),
+  )!;
+  assert.equal(bought.fee, 100);
+  assert.equal(s.user(u.id).cash, 899900);
+  assert.equal(
+    s.db.prepare("SELECT cost FROM holdings WHERE user_id=?").get(u.id)!.cost,
+    100100,
+  );
+
+  const sold = s.place(
+    u.id,
+    input({ side: "sell", type: "market", quantity: 10 }),
+    book([{ price: 10600, quantity: 10 }], [{ price: 10500, quantity: 10 }]),
+  )!;
+  assert.equal(sold.fee, 105);
+  assert.equal(sold.tax, 210);
+  assert.equal(s.user(u.id).cash, 1004585);
+  assert.equal(s.user(u.id).realized, 4585);
   s.db.close();
 });

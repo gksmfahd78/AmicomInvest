@@ -1,0 +1,1155 @@
+/* Trading keeps its summary small so the chart is visible on arrival. */
+.workspace-trade > .page-heading {
+  display: none;
+}
+.trade-account-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-bottom: 16px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+}
+.trade-account-summary > button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 18px;
+  min-width: 0;
+  text-align: left;
+}
+.trade-account-summary > button + button {
+  border-left: 1px solid var(--line);
+}
+.trade-account-summary span {
+  color: var(--muted);
+  font-size: 13px;
+}
+.trade-account-summary b {
+  font-size: 18px;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.workspace-trade .chart-wrap {
+  padding-top: 0;
+  flex: 0 0 auto;
+  justify-content: flex-start;
+}
+.workspace-trade .chart-wrap svg {
+  flex: 0 0 auto;
+}
+.workspace-trade .chart-panel {
+  align-self: start;
+}
+.chart-expand-short {
+  display: none;
+}
+.trade-execution {
+  display: grid;
+  grid-template-columns: minmax(160px, 0.8fr) minmax(230px, 1.2fr);
+  gap: 12px;
+  align-items: start;
+  min-width: 0;
+}
+.trade-execution > .panel {
+  min-width: 0;
+}
+.trade-execution .book-panel:not([hidden]) {
+  display: block;
+}
+.trade-execution .book-label {
+  padding: 10px 12px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.trade-execution .book-row {
+  min-height: 34px;
+  padding: 8px 12px;
+  gap: 8px;
+  align-items: center;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.trade-execution .book-row > span:not(.book-bar) {
+  font-size: 12px;
+  color: var(--muted);
+}
+.trade-execution .book-row:nth-child(7) {
+  border-bottom: 0;
+}
+.trade-execution .book-row.ask + .book-row.bid {
+  border-top: 1px solid var(--line);
+}
+.trade-execution .book-row[aria-pressed="true"] {
+  box-shadow: inset 0 0 0 2px var(--accent);
+  font-weight: 700;
+}
+.book-order-hint {
+  margin: 0;
+  padding: 10px 12px 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.workspace-trade .bottom-grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+@media (min-width: 1251px) {
+  .workspace-trade .trade-grid {
+    grid-template-columns: 200px minmax(280px, 1fr) minmax(420px, 0.95fr);
+  }
+}
+@media (min-width: 1600px) {
+  .workspace-trade .trade-grid {
+    grid-template-columns: 240px minmax(400px, 1fr) minmax(470px, 0.95fr);
+  }
+}
+@media (min-width: 601px) and (max-width: 1250px) {
+  .trade-execution {
+    grid-column: 1 / -1;
+    grid-template-columns: minmax(180px, 0.8fr) minmax(260px, 1.2fr);
+  }
+  .trade-execution .order-panel {
+    grid-column: auto;
+  }
+  .trade-execution .order-panel form,
+  .trade-execution .order-submit-bar {
+    display: block;
+  }
+  .trade-execution .order-panel form > label {
+    margin-bottom: 16px;
+  }
+  .trade-execution .quantity-shortcuts,
+  .trade-execution .order-available {
+    display: flex;
+  }
+}
+.order-notes {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0 12px;
+  margin-bottom: 16px;
+}
+.order-panel .order-quantity-shortcuts button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 0;
+  min-height: 52px;
+  padding: 8px 4px;
+  font-size: 13px;
+  scroll-margin-block: 180px 240px;
+}
+.order-panel .order-quantity-shortcuts small {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.order-panel .order-quantity-shortcuts button[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: var(--brand-soft);
+  color: var(--accent);
+  box-shadow: inset 0 0 0 1px currentColor;
+  font-weight: 700;
+}
+.order-panel .order-quantity-shortcuts.sell button[aria-pressed="true"] {
+  border-color: #528fe8;
+  background: #528fe81a;
+  color: var(--app-text);
+  box-shadow: inset 0 0 0 1px #528fe8;
+}
+.order-panel .order-quantity-shortcuts button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+  color: var(--muted);
+  border-color: var(--line);
+}
+.order-panel .order-available {
+  padding-bottom: 8px;
+}
+.order-quantity-help {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  margin-bottom: 16px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.order-quantity-help .quantity-error {
+  color: var(--accent);
+}
+.order-quantity-help .text-button {
+  font-size: 12px;
+  min-height: 44px;
+  text-decoration: underline;
+  scroll-margin-block: 180px 240px;
+}
+.order-notes > summary {
+  cursor: pointer;
+  padding: 12px 0;
+  font-size: 13px;
+}
+.order-notes > label {
+  padding-top: 8px;
+}
+.order-submit-bar {
+  padding-top: 8px;
+  background: var(--surface);
+}
+.order-submit-bar .submit-order {
+  width: 100%;
+}
+.order-submit-bar .order-total {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+}
+.order-submit-bar .order-total > strong {
+  overflow-wrap: anywhere;
+}
+.stock-filters {
+  margin: 0 12px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.stock-filters > summary {
+  cursor: pointer;
+  min-height: 44px;
+  padding: 10px;
+  font-size: 13px;
+}
+.stock-filters > summary > span {
+  display: block;
+  margin: 4px 0 0 14px;
+  font-size: 12px;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.stock-filters:not([open]) > summary > span {
+  display: inline;
+  margin-left: 6px;
+}
+.stock-filters .market-filter {
+  padding: 0 8px 8px;
+}
+.stock-filters .theme-filter {
+  margin: 0 8px 10px;
+}
+.workspace-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  margin-bottom: 16px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+}
+.workspace-tabs > button {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  padding: 10px 6px;
+  font-size: 14px;
+  color: var(--muted);
+  border-radius: 7px;
+}
+.workspace-tabs > [aria-selected="true"] {
+  color: var(--accent);
+  background: var(--brand-soft);
+  font-weight: 700;
+}
+.account-workspace .empty {
+  padding: 28px 18px;
+}
+.account-workspace .account-panels {
+  min-width: 0;
+}
+.analysis-table .analysis-more {
+  display: none;
+}
+
+/* The graph comes before optional tools and numeric explanations in DOM order. */
+.advanced-chart .advanced-indicators {
+  gap: 8px;
+  padding: 10px 16px;
+  flex-wrap: wrap;
+}
+.advanced-indicators > button {
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  min-height: 40px;
+  padding: 8px 12px;
+  font-size: 13px;
+}
+.advanced-indicators .zoom-actions {
+  margin-left: auto;
+}
+.chart-drawing-settings,
+.chart-readout-details {
+  margin: 0 16px 12px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+}
+.chart-drawing-settings > summary,
+.chart-readout-details > summary {
+  cursor: pointer;
+  padding: 12px;
+  font-size: 13px;
+}
+.chart-drawing-settings .advanced-toolbar {
+  border-bottom: 0;
+  padding: 12px;
+}
+.chart-readout-details > .indicator-readouts {
+  margin: 0;
+  padding: 0 12px 12px;
+}
+.chart-average-settings {
+  padding: 12px 16px;
+  border-top: 1px solid var(--line);
+  font-size: 13px;
+}
+.chart-average-settings > div {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0 12px;
+}
+.chart-average-settings > div > span {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+.chart-average-settings label {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  margin: 0;
+  padding: 0 4px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.chart-average-settings input[type="checkbox"] {
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  min-height: 18px;
+  margin: 0;
+  padding: 0;
+  accent-color: var(--accent);
+}
+.advanced-chart .chart-period-zoom {
+  margin: 0;
+  padding: 2px 16px 8px;
+}
+.advanced-chart .chart-period-zoom > span:first-of-type {
+  display: none;
+}
+.advanced-chart .advanced-ohlc {
+  padding: 4px 16px 8px;
+  margin: 0;
+}
+.advanced-chart .advanced-range {
+  margin-top: 8px;
+}
+
+/* Readable labels in both themes without altering SVG price coordinates. */
+[data-theme="dark"] {
+  --muted: #b3acba;
+}
+[data-theme="light"] {
+  --muted: #6a626d;
+}
+.stock-select .stock-label b {
+  font-size: 14px;
+  font-weight: 600;
+}
+.stock-select .stock-price b {
+  font-size: 16px;
+}
+.stock-select small,
+.stock-theme-preview,
+.stock-result-count,
+.stock-foot,
+.theme-source {
+  font-size: 12px;
+  color: var(--muted);
+}
+.stock-select .stock-price small {
+  font-size: 13px;
+}
+.panel-heading h2 {
+  font-size: 15px;
+}
+.quote-stats,
+.chart-wrap .ohlc {
+  font-size: 12px;
+  color: var(--muted);
+}
+.chart-toolbar .small-tabs button {
+  font-size: 12px;
+}
+.panel-heading .muted,
+.summary-card p,
+.order-available,
+.order-total > small {
+  font-size: 12px;
+}
+.sidebar .nav-item {
+  font-size: 13px;
+}
+.order-panel label,
+.order-panel input,
+.order-panel select,
+.table-link {
+  font-size: 14px;
+}
+.order-panel input,
+.order-panel select {
+  min-height: 42px;
+}
+.order-notes .trade-plan-fields {
+  margin-top: 10px;
+}
+@media (min-width: 601px) and (max-width: 1250px) {
+  .order-panel .order-notes,
+  .order-panel .order-submit-bar {
+    grid-column: 1 / -1;
+  }
+  .order-submit-bar {
+    display: flex;
+    gap: 18px;
+    align-items: center;
+  }
+  .order-submit-bar .order-total,
+  .order-submit-bar .submit-order {
+    flex: 1;
+    min-width: 0;
+  }
+}
+@media (max-width: 600px) {
+  .trade-execution {
+    display: contents;
+  }
+  .trade-execution > .panel {
+    border-top: 0;
+    border-radius: 0 0 10px 10px;
+  }
+  .trade-execution .book-row {
+    min-height: 44px;
+    padding: 10px 18px;
+    font-size: 14px;
+  }
+  .trade-execution .book-row > span:not(.book-bar) {
+    font-size: 13px;
+  }
+  html {
+    scroll-padding-block: 170px 100px;
+  }
+  .order-submit-bar.outside-order {
+    visibility: hidden;
+    pointer-events: none;
+  }
+  .record-toggle,
+  .analysis-more button {
+    scroll-margin-block: 170px 100px;
+  }
+  .workspace-trade {
+    padding-top: 12px;
+  }
+  .trade-account-summary {
+    margin-bottom: 12px;
+  }
+  .trade-account-summary > button {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 3px;
+    padding: 9px 10px;
+  }
+  .trade-account-summary span {
+    font-size: 11px;
+  }
+  .trade-account-summary b {
+    font-size: 16px;
+  }
+  .workspace-trade .mobile-trade-header {
+    padding-top: 10px;
+  }
+  .workspace-trade .mobile-quote {
+    margin: 6px 0;
+  }
+  .workspace-trade .quote-stats {
+    padding: 10px 14px;
+    gap: 4px 10px;
+  }
+  .workspace-trade .chart-toolbar {
+    padding: 8px 10px;
+    gap: 8px;
+  }
+  .workspace-trade .chart-toolbar .small-tabs {
+    gap: 2px;
+  }
+  .workspace-trade .chart-toolbar .small-tabs button {
+    min-width: 44px;
+    min-height: 44px;
+    padding: 8px 4px;
+    white-space: nowrap;
+  }
+  .workspace-trade .chart-wrap svg {
+    order: -1;
+  }
+  .workspace-trade .chart-wrap .ohlc {
+    margin-top: 8px;
+  }
+  .workspace-trade .large.small-tabs {
+    padding: 8px 10px;
+  }
+  .workspace-trade .chart-expand {
+    padding: 8px;
+    font-size: 12px;
+  }
+  .order-panel form {
+    padding-bottom: 160px;
+  }
+  .order-panel input,
+  .order-panel select {
+    font-size: 16px;
+    min-height: 48px;
+  }
+  .order-submit-bar {
+    position: fixed;
+    z-index: 15;
+    left: 14px;
+    right: 14px;
+    bottom: max(
+      calc(70px + env(safe-area-inset-bottom)),
+      var(--keyboard-inset, 0px)
+    );
+    padding: 10px 12px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    box-shadow: 0 -4px 18px #0002;
+  }
+  .order-submit-bar .order-total {
+    display: flex;
+    flex-direction: row;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 4px 12px;
+    padding: 0 0 8px;
+    margin: 0;
+    border: 0;
+  }
+  .order-submit-bar .order-total > span {
+    font-size: 12px;
+  }
+  .order-submit-bar .order-total > strong {
+    font-size: 18px;
+    margin-left: auto;
+  }
+  .order-submit-bar .order-total > small {
+    width: 100%;
+    font-size: 11px;
+  }
+  .order-submit-bar .submit-order {
+    margin: 0;
+    min-height: 46px;
+  }
+  .order-panel :is(input, select, summary) {
+    scroll-margin-block: 170px 220px;
+  }
+  .workspace-tabs > button {
+    font-size: 13px;
+  }
+  .workspace-account .summary-grid {
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+  .workspace-account .summary-card {
+    padding: 10px;
+  }
+  .workspace-account .summary-card p,
+  .workspace-account .summary-title svg {
+    display: none;
+  }
+  .workspace-account .summary-value {
+    margin-top: 4px;
+    font-size: 20px;
+  }
+  .workspace-account > .page-heading {
+    margin-bottom: 14px;
+  }
+  .workspace-account .page-heading :is(.eyebrow, p) {
+    display: none;
+  }
+  .sidebar .nav-item {
+    font-size: 11px;
+  }
+  .stock-picker .search {
+    margin-bottom: 8px;
+  }
+  .stock-select .stock-label b {
+    font-size: 15px;
+  }
+  .stock-select .stock-price b {
+    font-size: 16px;
+  }
+  .advanced-chart .advanced-indicators {
+    padding: 8px 10px;
+    flex-wrap: nowrap;
+    gap: 6px;
+  }
+  .advanced-indicators > button {
+    min-width: 0;
+    padding: 8px 10px;
+  }
+  .advanced-indicators .zoom-actions {
+    gap: 4px;
+  }
+  .advanced-chart .chart-period-zoom {
+    padding: 2px 10px 6px;
+    font-size: 11px;
+    gap: 4px 12px;
+  }
+  .advanced-chart .advanced-ohlc {
+    padding: 2px 10px 8px;
+    font-size: 11px;
+    gap: 4px 8px;
+  }
+  .analysis-table .analysis-result {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px 14px;
+    padding: 12px;
+    margin-bottom: 8px;
+  }
+  .analysis-table .analysis-result > td {
+    min-width: 0;
+    padding: 0;
+    border: 0;
+  }
+  .analysis-table .analysis-result > td::before {
+    margin-bottom: 2px;
+    font-size: 11px;
+  }
+  .analysis-table .analysis-result > td[data-label="종목"] {
+    grid-column: 1;
+    grid-row: 1 / 3;
+  }
+  .analysis-table .analysis-result > td[data-label="종목"]::before {
+    display: none;
+  }
+  .analysis-table .analysis-result .table-link {
+    font-size: 15px;
+    min-height: 36px;
+  }
+  .analysis-table .analysis-result .analysis-price {
+    grid-column: 2;
+    grid-row: 1;
+    text-align: right;
+    font-size: 15px;
+  }
+  .analysis-table .analysis-result .analysis-rate {
+    grid-column: 2;
+    grid-row: 2;
+    text-align: right;
+    font-weight: 700;
+    font-size: 15px;
+  }
+  .analysis-table .analysis-result .analysis-rate::before {
+    display: none;
+  }
+  .analysis-table .analysis-result .analysis-turnover {
+    grid-column: 1;
+    grid-row: 3;
+    font-size: 13px;
+  }
+  .analysis-table .analysis-result .analysis-more {
+    display: flex;
+    grid-column: 2;
+    grid-row: 3;
+    align-items: end;
+    justify-content: flex-end;
+  }
+  .analysis-more button {
+    min-height: 44px;
+    padding: 6px 10px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    color: var(--accent);
+    font-size: 12px;
+  }
+  .analysis-table .analysis-result:not(.is-expanded) .analysis-detail,
+  .analysis-table .analysis-result:not(.is-expanded) .analysis-row-themes {
+    display: none;
+  }
+  .analysis-table .analysis-result .analysis-detail {
+    grid-column: 1 / -1;
+    padding-top: 8px;
+    border-top: 1px solid var(--line);
+  }
+  .analysis-table .analysis-result .analysis-detail small {
+    font-size: 12px;
+  }
+}
+@media (max-width: 360px) {
+  .chart-expand-label {
+    display: none;
+  }
+  .chart-expand-short {
+    display: inline;
+  }
+}
+
+/* Keep the price chart in focus; optional controls live in one dismissible panel. */
+.advanced-chart.chart-simplified [hidden] {
+  display: none !important;
+}
+.chart-simplified .chart-view-workspace {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  flex: 1 0 auto;
+  min-width: 0;
+}
+.advanced-chart.chart-simplified .advanced-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 8px;
+  padding: 10px 14px;
+}
+.chart-simplified .advanced-header > div:first-child {
+  min-width: 0;
+}
+.chart-simplified .advanced-header h2 {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin: 0;
+  font-size: 17px;
+}
+.chart-simplified .advanced-header p {
+  font-size: 11px;
+  margin: 3px 0 0;
+}
+.chart-simplified .advanced-period {
+  margin: 0;
+  display: flex;
+  grid-area: auto;
+  order: 0;
+}
+.chart-simplified .advanced-period button {
+  min-height: 44px;
+  padding: 8px 14px;
+  font-size: 13px;
+}
+.chart-simplified .advanced-close {
+  min-width: 44px;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  grid-area: auto;
+}
+.advanced-chart.chart-simplified .advanced-indicators {
+  flex-wrap: nowrap;
+  gap: 8px;
+  padding: 6px 14px;
+}
+.chart-simplified .chart-view-modes {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  border-radius: 8px;
+  background: var(--surface-raised);
+  padding: 2px;
+}
+.chart-simplified .chart-view-modes button {
+  min-height: 40px;
+  padding: 8px 14px;
+  border-radius: 6px;
+  font-size: 13px;
+  white-space: nowrap;
+}
+.chart-simplified .chart-view-modes button[aria-pressed="true"] {
+  background: var(--brand-soft);
+  color: var(--accent);
+  font-weight: 700;
+}
+.chart-simplified .zoom-actions {
+  gap: 4px;
+}
+.chart-simplified .zoom-actions button {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  justify-content: center;
+}
+.chart-simplified .zoom-actions > span {
+  display: none;
+}
+.chart-price-summary {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 20px 8px;
+}
+.chart-price-summary > div {
+  min-width: 0;
+}
+.chart-price-summary small {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+}
+.chart-price-summary strong {
+  display: block;
+  font-size: 24px;
+  font-variant-numeric: tabular-nums;
+  margin-top: 3px;
+}
+.chart-price-summary strong small {
+  display: inline;
+  margin-left: 4px;
+  font-size: 13px;
+  font-weight: 400;
+}
+.chart-price-summary > span {
+  color: var(--muted);
+  font-size: 12px;
+  text-align: right;
+  line-height: 1.6;
+}
+.chart-simplified .advanced-canvas {
+  outline-offset: -3px;
+}
+.chart-viewport-summary {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 12px;
+  padding: 4px 20px;
+  color: var(--muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.chart-quick-hint {
+  margin: 4px 20px 10px;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+.chart-bottom-tools {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  position: sticky;
+  bottom: 0;
+  z-index: 4;
+  margin-top: auto;
+  padding: 6px 12px;
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+  gap: 6px;
+}
+.chart-bottom-tools button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 44px;
+  border-radius: 8px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.chart-bottom-tools button:hover {
+  background: var(--surface-raised);
+}
+.chart-active-tool {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 0 16px;
+  background: var(--brand-soft);
+  color: var(--accent);
+  font-size: 13px;
+}
+.chart-active-tool button {
+  min-width: 44px;
+  min-height: 44px;
+  text-decoration: underline;
+}
+.chart-active-tool > span {
+  margin-right: auto;
+}
+.chart-inline-notice {
+  padding: 10px 16px;
+  font-size: 13px;
+  color: var(--accent);
+  line-height: 1.7;
+}
+.chart-inline-notice button {
+  min-height: 44px;
+  margin-left: 10px;
+  text-decoration: underline;
+}
+.chart-control-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9;
+  background: #0007;
+}
+.chart-control-panel {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(560px, calc(100vw - 48px));
+  max-height: min(760px, calc(100dvh - 80px));
+  z-index: 10;
+  overflow: auto;
+  overscroll-behavior: contain;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: 0 20px 80px #0005;
+}
+.chart-control-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+}
+.chart-control-heading h3 {
+  font-size: 16px;
+  margin: 0;
+  outline: none;
+}
+.chart-control-heading button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+}
+.chart-control-panel > :is(.indicator-picker, .chart-drawing-settings) {
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+}
+.chart-control-panel
+  > :is(.indicator-picker, .chart-drawing-settings)
+  > summary {
+  display: none;
+}
+.chart-control-panel .chart-average-settings {
+  border-top: 0;
+}
+.chart-control-panel .indicator-options {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.chart-control-panel .indicator-presets {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.chart-control-panel .indicator-presets button {
+  min-height: 44px;
+  padding: 8px;
+}
+.chart-control-panel .indicator-picker > p {
+  font-size: 11px;
+}
+.chart-control-panel .indicator-readouts {
+  display: block;
+}
+.chart-control-panel .indicator-readouts > * + * {
+  margin-top: 12px;
+}
+.chart-control-panel .draw-tools {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  width: 100%;
+  gap: 8px;
+}
+.chart-control-panel .draw-tools button {
+  flex-direction: row;
+  justify-content: center;
+  min-height: 48px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  font-size: 13px;
+}
+.chart-control-panel .advanced-toolbar {
+  padding: 16px;
+}
+.chart-control-panel :is(.draw-color, .draw-width) {
+  font-size: 13px;
+}
+.chart-control-panel .draw-color input {
+  width: 44px;
+  height: 44px;
+}
+.chart-control-panel .draw-width select {
+  width: 74px;
+  min-height: 44px;
+  font-size: 14px;
+}
+.chart-control-panel .draw-actions {
+  width: 100%;
+  display: flex;
+  margin: 0;
+  gap: 8px;
+}
+.chart-control-panel .draw-actions button {
+  min-height: 44px;
+  min-width: 44px;
+  padding: 10px;
+  font-size: 12px;
+  justify-content: center;
+}
+.chart-control-done {
+  display: block;
+  width: calc(100% - 32px);
+  min-height: 44px;
+  margin: 16px;
+  border-radius: 8px;
+  background: var(--accent);
+  color: white;
+  font-weight: 600;
+}
+.chart-control-panel .chart-display-settings {
+  padding: 16px;
+}
+.chart-display-settings h4 {
+  margin: 4px 0 10px;
+  font-size: 14px;
+}
+.chart-simplified .chart-display-settings .chart-period-zoom {
+  margin: 0;
+  padding: 0;
+}
+.chart-simplified
+  .chart-display-settings
+  .chart-period-zoom
+  > span:first-of-type {
+  display: block;
+}
+.chart-display-settings .advanced-range {
+  padding: 10px 0;
+  flex-wrap: wrap;
+}
+.chart-display-settings .advanced-range input {
+  min-width: 140px;
+  flex: 1;
+}
+.chart-display-settings .advanced-range button {
+  min-height: 44px;
+}
+.chart-display-settings .chart-gesture-hint {
+  margin: 0 0 20px;
+}
+.chart-simplified .chart-display-settings .advanced-ohlc {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 12px;
+  padding: 0;
+  margin: 0 0 20px;
+  font-size: 13px;
+}
+.chart-display-settings .advanced-footer {
+  padding: 12px 0 0;
+  font-size: 12px;
+  line-height: 1.7;
+}
+.chart-display-settings .advanced-footer button {
+  min-height: 44px;
+  color: var(--accent);
+}
+@media (max-width: 750px) {
+  .advanced-chart.chart-simplified .advanced-header {
+    padding: 8px 10px;
+    gap: 4px;
+  }
+  .chart-simplified .advanced-header h2 {
+    font-size: 15px;
+  }
+  .chart-simplified .advanced-header small {
+    display: block;
+    margin: 3px 0 0;
+    font-size: 11px;
+  }
+  .chart-simplified .advanced-header p {
+    display: none;
+  }
+  .chart-simplified .advanced-period {
+    gap: 2px;
+  }
+  .chart-simplified .advanced-period button {
+    width: 38px;
+    padding: 4px;
+    font-size: 12px;
+  }
+  .advanced-chart.chart-simplified .advanced-indicators {
+    padding: 6px 10px;
+  }
+  .chart-simplified .chart-view-modes button {
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+  .chart-simplified .zoom-actions {
+    gap: 3px;
+  }
+  .chart-simplified .zoom-actions button {
+    width: 40px;
+  }
+  .chart-price-summary {
+    padding: 8px 14px;
+  }
+  .chart-price-summary > span {
+    font-size: 11px;
+    max-width: 118px;
+  }
+  .chart-price-summary strong {
+    font-size: 22px;
+  }
+  .chart-viewport-summary {
+    padding: 4px 14px;
+  }
+  .chart-quick-hint {
+    margin: 2px 14px 8px;
+  }
+  .chart-bottom-tools {
+    padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
+    gap: 4px;
+  }
+  .chart-bottom-tools button {
+    font-size: 12px;
+    gap: 5px;
+  }
+  .chart-control-panel {
+    top: auto;
+    bottom: 0;
+    left: 0;
+    transform: none;
+    width: 100%;
+    max-height: 76dvh;
+    max-height: min(760px, 76dvh);
+    border-radius: 16px 16px 0 0;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .chart-control-panel .indicator-options {
+    grid-template-columns: 1fr;
+  }
+}

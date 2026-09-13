@@ -1,0 +1,50 @@
+[
+  {
+    "week": 1,
+    "title": "투자의 출발점",
+    "slides": 11,
+    "file": "AMICOM_Week_01.pptx"
+  },
+  {
+    "week": 2,
+    "title": "호가와 주문 읽기",
+    "slides": 11,
+    "file": "AMICOM_Week_02.pptx"
+  },
+  {
+    "week": 3,
+    "title": "기업과 재무제표",
+    "slides": 12,
+    "file": "AMICOM_Week_03.pptx"
+  },
+  {
+    "week": 4,
+    "title": "가격과 가치 비교",
+    "slides": 11,
+    "file": "AMICOM_Week_04.pptx"
+  },
+  {
+    "week": 5,
+    "title": "시장·테마·뉴스 읽기",
+    "slides": 11,
+    "file": "AMICOM_Week_05.pptx"
+  },
+  {
+    "week": 6,
+    "title": "분산투자와 ETF",
+    "slides": 11,
+    "file": "AMICOM_Week_06.pptx"
+  },
+  {
+    "week": 7,
+    "title": "매매 계획과 투자 복기",
+    "slides": 12,
+    "file": "AMICOM_Week_07.pptx"
+  },
+  {
+    "week": 8,
+    "title": "최종 발표와 나의 원칙",
+    "slides": 11,
+    "file": "AMICOM_Week_08.pptx"
+  }
+]

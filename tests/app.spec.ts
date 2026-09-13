@@ -1,3 +1,4 @@
+import { openDetails } from "./uiControls";
 import { test, expect } from "@playwright/test";
 test("관리자 지급 → 모의 매수·매도 → 지정가 취소 및 회원 권한", async ({
   page,
@@ -13,9 +14,7 @@ test("관리자 지급 → 모의 매수·매도 → 지정가 취소 및 회원
   await page.getByLabel("아이디", { exact: true }).fill("admin");
   await page.getByLabel("비밀번호", { exact: true }).fill("Study!2026");
   await page.getByRole("button", { name: "로그인", exact: true }).click();
-  await expect(
-    page.getByRole("heading", { name: "시장을 읽고, 투자를 연습해요." }),
-  ).toBeVisible();
+  await expect(page.getByRole("region", { name: "투자금 요약" })).toBeVisible();
   await page.getByRole("button", { name: "관리자", exact: true }).click();
   await page.getByLabel("지급 대상").selectOption("1");
   await page
@@ -27,6 +26,7 @@ test("관리자 지급 → 모의 매수·매도 → 지정가 취소 및 회원
     page.getByRole("button", { name: "삼성전자 매수", exact: true }),
   ).toBeEnabled();
   await page.getByLabel("주문 수량", { exact: true }).fill("2");
+  await openDetails(page, ".order-notes");
   await page.getByLabel("매매 이유").fill("반도체 실적을 관찰하기 위한 연습");
   await page
     .getByRole("button", { name: "삼성전자 매수", exact: true })
@@ -68,7 +68,7 @@ test("관리자 지급 → 모의 매수·매도 → 지정가 취소 및 회원
   await memberPage.getByLabel("스터디 초대 코드").fill("STUDY2026");
   await memberPage.getByRole("button", { name: "가입하고 시작하기" }).click();
   await expect(
-    memberPage.getByRole("heading", { name: "시장을 읽고, 투자를 연습해요." }),
+    memberPage.getByRole("region", { name: "투자금 요약" }),
   ).toBeVisible();
   await expect(
     memberPage.getByRole("button", { name: "관리자", exact: true }),

@@ -10,7 +10,9 @@ import { unzipSync } from "fflate";
 import { z } from "zod";
 import type { Stock } from "../src/types";
 const path = resolve("data/stock-master.json");
+export const CATALOG_VERSION = 2;
 const schema = z.object({
+  version: z.number().int().default(1),
   updatedAt: z.string().datetime(),
   stocks: z.array(
     z.object({
@@ -18,6 +20,7 @@ const schema = z.object({
       name: z.string().min(1),
       market: z.enum(["KOSPI", "KOSDAQ"]),
       sector: z.string(),
+      instrument: z.enum(["stock", "etf"]).default("stock"),
       base: z.number().positive(),
     }),
   ),
@@ -37,6 +40,7 @@ export function parseMaster(
 ): Stock[] {
   const tail = market === "KOSPI" ? 227 : 221;
   const groups: Record<string, string> = {
+    EF: "ETF",
     ST: "주식",
     FS: "외국주식",
     DR: "주식예탁증서",
@@ -56,7 +60,14 @@ export function parseMaster(
     if (!/^[0-9A-Z]{6}$/.test(symbol) || !groups[group]) continue;
     if (!name || name.includes("\ufffd"))
       throw Error("종목 파일의 이름 형식이 올바르지 않습니다.");
-    result.push({ symbol, name, market, sector: groups[group], base: 10000 });
+    result.push({
+      symbol,
+      name,
+      market,
+      sector: groups[group],
+      instrument: group === "EF" ? "etf" : "stock",
+      base: 10000,
+    });
   }
   return result;
 }
@@ -82,6 +93,7 @@ export async function downloadCatalog() {
   if (new Set(stocks.map((s) => s.symbol)).size !== stocks.length)
     throw Error("종목코드 중복");
   const catalog = schema.parse({
+    version: CATALOG_VERSION,
     updatedAt: new Date().toISOString(),
     stocks: stocks.sort((a, b) => a.name.localeCompare(b.name, "ko")),
   });
